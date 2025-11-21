@@ -3,377 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WvW Commander Intel V3</title>
+    <title>WvW Commander V11 (Deep Intel)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f1115; color: #cfd3d8; }
+        body { font-family: 'Inter', sans-serif; background-color: #0b0d10; color: #cfd3d8; }
+        .tag { font-size: 0.65rem; font-weight: 800; padding: 3px 6px; border-radius: 3px; text-transform: uppercase; white-space: nowrap; margin: 1px; display: inline-block; }
         
-        /* Categories & Chips */
-        .tag-base { font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; }
-        .tag-field { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        /* COLORS */
+        .t-fire { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .t-water { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+        .t-blast { background: #ea580c; color: #fff; border: 1px solid #f97316; }
+        .t-stab { background: #0891b2; color: #fff; border: 1px solid #06b6d4; box-shadow: 0 0 5px #06b6d4; } 
+        .t-cleanse { background: #ca8a04; color: #fff; border: 1px solid #eab308; }
+        .t-res { background: #65a30d; color: #fff; border: 1px solid #84cc16; }
+        .t-reflect { background: #e2e8f0; color: #0f172a; border: 1px solid #fff; }
+        .t-block { background: #94a3b8; color: #0f172a; border: 1px solid #cbd5e1; }
+        .t-might { background: #7f1d1d; color: #fff; border: 1px solid #b91c1c; }
+        .t-strip { background: #9333ea; color: #fff; border: 1px solid #a855f7; }
+        .t-pull { background: #db2777; color: #fff; border: 1px solid #ec4899; }
+        .t-cc { background: #be123c; color: #fff; border: 1px solid #f43f5e; }
+        .t-immob { background: #166534; color: #86efac; border: 1px solid #22c55e; }
+        .t-bubble { background: #facc15; color: #000; border: 2px solid #fff; animation: pulse 1.5s infinite; }
+        .t-portal { background: #4c1d95; color: #fff; border: 1px solid #8b5cf6; }
+        .t-stealth { background: #4b5563; color: #fff; border: 1px solid #9ca3af; }
+        .t-smoke { background: #18181b; color: #71717a; border: 1px solid #52525b; }
+        .t-static { background: #701a75; color: #f5d0fe; border: 1px solid #d946ef; }
+        .t-light { background: #fef08a; color: #854d0e; border: 1px solid #eab308; }
+        .t-ethereal { background: #581c87; color: #d8b4fe; border: 1px solid #a855f7; }
         
-        /* Specific Effect Colors */
-        .ef-stab { background: #0ea5e9; color: #000; box-shadow: 0 0 8px rgba(14, 165, 233, 0.4); } /* Stability - Cyan */
-        .ef-water { background: #3b82f6; color: #fff; } /* Water Field - Blue */
-        .ef-fire { background: #ef4444; color: #fff; } /* Fire Field - Red */
-        .ef-blast { background: #f97316; color: #fff; } /* Blast - Orange */
-        .ef-cleanse { background: #eab308; color: #000; } /* Cleanse - Yellow */
-        .ef-strip { background: #a855f7; color: #fff; } /* Strip - Purple */
-        .ef-pull { background: #ec4899; color: #fff; } /* Pull - Pink */
-        .ef-stealth { background: #64748b; color: #fff; } /* Stealth - Grey */
-
-        .player-row { transition: background 0.2s; }
-        .player-row:hover { background: #1f2937; }
-        
-        /* Loading Spinner */
-        .loader { border: 3px solid #374151; border-top: 3px solid #10b981; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0); } 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
     </style>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- COMMANDER DATABASE (The "Good Stuff") ---
-        // We map specific SKILL IDs (not palette IDs) to metadata.
-        const SKILL_META = {
-            // --- GUARDIAN ---
-            9081: { name: "\"Stand Your Ground!\"", type: "Utility", effect: "ef-stab", label: "STABILITY" },
-            9036: { name: "Hallowed Ground", type: "Utility", effect: "ef-stab", label: "STAB (Field)" },
-            9168: { name: "Wall of Reflection", type: "Utility", effect: "ef-reflect", label: "REFLECT" },
-            44946: { name: "Mantra of Liberation", type: "Utility", effect: "ef-stab", label: "STAB (Mantra)" },
-            
-            // --- NECROMANCER ---
-            10615: { name: "Well of Corruption", type: "Utility", effect: "ef-strip", label: "STRIP (Well)" },
-            10625: { name: "Well of Suffering", type: "Utility", effect: "ef-strip", label: "DPS (Well)" },
-            10833: { name: "Spectral Grasp", type: "Utility", effect: "ef-pull", label: "PULL (5x)" },
-            41386: { name: "Sand Swell", type: "Utility", effect: "ef-stealth", label: "PORTAL" },
-            10603: { name: "Corrosive Poison Cloud", type: "Utility", effect: "ef-reflect", label: "BLOCK PROJ" },
-
-            // --- ELEMENTALIST ---
-            56983: { name: "Wash the Pain Away!", type: "Utility", effect: "ef-cleanse", label: "CLEANSE" },
-            5538: { name: "Mist Form", type: "Utility", effect: "ef-stealth", label: "MIST FORM" },
-            5651: { name: "Lightning Flash", type: "Utility", effect: "ef-stealth", label: "BLINK" },
-            
-            // --- ENGINEER ---
-            5837: { name: "Bomb Kit", type: "Utility", effect: "ef-blast", label: "BLAST SOURCE" },
-            30357: { name: "Bulwark Gyro", type: "Utility", effect: "ef-reflect", label: "DOME" },
-            30806: { name: "Sneak Gyro", type: "Utility", effect: "ef-stealth", label: "STEALTH GYRO" },
-            5818: { name: "Elixir Gun", type: "Utility", effect: "ef-cleanse", label: "CLEANSE FIELD" },
-            6020: { name: "Function Gyro", type: "Utility", effect: "ef-cleanse", label: "RES GYRO" },
-
-            // --- MESMER ---
-            10213: { name: "Veil", type: "Utility", effect: "ef-stealth", label: "VEIL" },
-            30869: { name: "Gravity Well", type: "Utility", effect: "ef-pull", label: "GRAV WELL" },
-            10201: { name: "Null Field", type: "Utility", effect: "ef-strip", label: "STRIP FIELD" },
-            10236: { name: "Portal Entre", type: "Utility", effect: "ef-stealth", label: "PORTAL" },
-
-            // --- REVENANT ---
-            27326: { name: "Rite of the Great Dwarf", type: "Utility", effect: "ef-stab", label: "THE ROAD" },
-            26685: { name: "Phase Traversal", type: "Utility", effect: "ef-blast", label: "CHASE" }
-        };
-
-        // --- WEAPON INFERENCE (Automatic Capabilities based on Class + Weapon) ---
-        // ID: 9=Staff, 14=Scepter, 25=Focus, 24=Warhorn, 26=Hammer, 0=Sword
-        const WEAPON_CAPABILITIES = {
-            1: { // Guardian
-                9: [{ label: "LINE WARDING", effect: "ef-pull" }, { label: "LIGHT FIELD", effect: "ef-cleanse" }],
-                14: [{ label: "IMMOB", effect: "ef-pull" }], // Scepter
-                26: [{ label: "BLAST", effect: "ef-blast" }] // Hammer
-            },
-            7: { // Elementalist
-                9: [{ label: "WATER FIELDS", effect: "ef-water" }, { label: "BLAST", effect: "ef-blast" }, { label: "STATIC", effect: "ef-pull" }], // Staff
-                24: [{ label: "WATER GLOBE", effect: "ef-water" }] // Warhorn
-            },
-            9: { // Necromancer
-                9: [{ label: "FEAR MARK", effect: "ef-pull" }, { label: "REGEN MARK", effect: "ef-water" }] // Staff
-            },
-            4: { // Engineer
-                 // Hammer (Scrapper) is ID 0 or Elite Spec specific, usually inferred by Spec
-            }
-        };
-
-        const PROFESSION_NAMES = {
-            1: "Guardian", 2: "Warrior", 3: "Engineer", 4: "Ranger", 5: "Thief", 
-            6: "Elementalist", 7: "Mesmer", 8: "Necromancer", 9: "Revenant"
-        };
-
-        // --- CONFIG ---
-        const firebaseConfig = {
-            // PASTE YOUR KEYS HERE
-            apiKey: "AIzaSyCp-Fg7QvdRmZ5I6mduyUYW7seuhdcdifc",
-            authDomain: "wvw-commander.firebaseapp.com",
-            projectId: "wvw-commander",
-            storageBucket: "wvw-commander.firebasestorage.app",
-            messagingSenderId: "1055181288368",
-            appId: "1:1055181288368:web:20e9b9a17b0d7a70aa1c75"
-        };
-
-        // --- APP STATE ---
-        let app, db, auth;
-        let PALETTE_CACHE = {}; // Stores API results: { 'Guardian': { 12: 9081 }, ... }
-
-        async function init() {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                await signInAnonymously(auth);
-                
-                onAuthStateChanged(auth, (user) => {
-                    if(user) {
-                        setupLiveSync();
-                        document.getElementById('connection-status').innerHTML = '<span class="text-green-400 font-bold">● ONLINE</span>';
-                    }
-                });
-            } catch(e) {
-                console.error(e);
-                document.getElementById('connection-status').innerHTML = '<span class="text-red-500">CONFIG ERROR</span>';
-            }
-        }
-
-        function setupLiveSync() {
-            onSnapshot(query(collection(db, "wvw_v3_builds")), (snapshot) => {
-                const builds = [];
-                snapshot.forEach(doc => builds.push({ id: doc.id, ...doc.data() }));
-                renderUI(builds);
-            });
-        }
-
-        // --- API & DECODER ---
-        async function getPaletteMap(professionName) {
-            if (PALETTE_CACHE[professionName]) return PALETTE_CACHE[professionName];
-
-            const statusEl = document.getElementById('api-status');
-            statusEl.innerHTML = `<span class="loader"></span> Fetching ${professionName} data...`;
-            statusEl.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`https://api.guildwars2.com/v2/professions/${professionName}`);
-                const data = await res.json();
-                
-                // Build Map: { PaletteID: SkillID }
-                const map = {};
-                // The API returns [ [paletteId, skillId], ... ] in data.skills_by_palette
-                data.skills_by_palette.forEach(pair => {
-                    map[pair[0]] = pair[1];
-                });
-                
-                PALETTE_CACHE[professionName] = map;
-                statusEl.classList.add('hidden');
-                return map;
-            } catch (e) {
-                console.error("API Error", e);
-                statusEl.textContent = "API Error";
-                return null;
-            }
-        }
-
-        async function parseBuildCode() {
-            const code = document.getElementById('code-input').value.trim();
-            const name = document.getElementById('name-input').value.trim() || "Unknown Agent";
-            
-            if (!code.startsWith('[&') || !code.endsWith(']')) {
-                alert("Invalid Code Format"); return;
-            }
-
-            try {
-                // 1. Base64 Decode
-                const base64 = code.replace(/^\[&|\]$/g, '').replace(/-/g, '+').replace(/_/g, '/');
-                const binaryString = window.atob(base64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                const view = new DataView(bytes.buffer);
-
-                // 2. Get Profession
-                const profId = view.getUint8(1);
-                const professionName = PROFESSION_NAMES[profId] || "Unknown";
-
-                // 3. Fetch Palette Map for this Profession (The Magic Fix)
-                const paletteMap = await getPaletteMap(professionName);
-                if (!paletteMap) { alert("Could not fetch GW2 data. Check internet."); return; }
-
-                // 4. Decode Utilities (Offsets 13, 15, 17, 19(Elite))
-                const detectedAbilities = [];
-                const utilityOffsets = [13, 15, 17, 19];
-                
-                utilityOffsets.forEach(offset => {
-                    if(bytes.length >= offset + 2) {
-                        const paletteId = view.getUint16(offset, true); // Little Endian
-                        const skillId = paletteMap[paletteId]; // CONVERT PALETTE TO SKILL ID
-                        
-                        if (skillId && SKILL_META[skillId]) {
-                            detectedAbilities.push(SKILL_META[skillId]);
-                        }
-                    }
-                });
-
-                // 5. Decode Weapons (Offsets 21, 22) & Infer Capabilities
-                const weaponOffsets = [21, 22, 23, 24];
-                weaponOffsets.forEach(offset => {
-                    if(bytes.length > offset) {
-                        const wId = view.getUint8(offset);
-                        // Check specific weapon capabilities
-                        if(WEAPON_CAPABILITIES[profId] && WEAPON_CAPABILITIES[profId][wId]) {
-                            WEAPON_CAPABILITIES[profId][wId].forEach(cap => {
-                                detectedAbilities.push({
-                                    name: "Weapon Skill",
-                                    label: cap.label,
-                                    effect: cap.effect,
-                                    type: "Weapon"
-                                });
-                            });
-                        }
-                    }
-                });
-
-                // 6. Save to DB
-                await addDoc(collection(db, "wvw_v3_builds"), {
-                    name: name,
-                    profession: professionName,
-                    abilities: detectedAbilities,
-                    rawCode: code,
-                    timestamp: serverTimestamp()
-                });
-
-                document.getElementById('code-input').value = '';
-                
-            } catch (e) {
-                console.error(e);
-                alert("Parsing failed. Code might be corrupted.");
-            }
-        }
-
-        // --- RENDERERS ---
-        function renderUI(builds) {
-            // 1. Dashboard Tally
-            const tally = {};
-            builds.forEach(b => {
-                if(b.abilities) {
-                    b.abilities.forEach(a => {
-                        if(!tally[a.label]) tally[a.label] = { count: 0, effect: a.effect, sources: [] };
-                        tally[a.label].count++;
-                        tally[a.label].sources.push(b.name); // Track who has it
-                    });
-                }
-            });
-
-            const grid = document.getElementById('capability-grid');
-            grid.innerHTML = '';
-            
-            Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count).forEach(key => {
-                const item = tally[key];
-                // Create tooltop list of names
-                const sourceList = item.sources.join('\n');
-                
-                grid.innerHTML += `
-                    <div class="bg-gray-800 border border-gray-700 p-3 rounded flex flex-col items-center justify-center shadow cursor-help" title="Sources:\n${sourceList}">
-                        <div class="tag-base ${item.effect} mb-1 px-2 py-1 text-xs">${key}</div>
-                        <div class="text-2xl font-bold text-white">${item.count}</div>
-                    </div>
-                `;
-            });
-
-            // 2. Detailed Roster
-            const roster = document.getElementById('roster-list');
-            roster.innerHTML = '';
-            
-            builds.forEach(b => {
-                const abilitiesHtml = b.abilities.map(a => 
-                    `<span class="tag-base ${a.effect} mr-1 mb-1 inline-block" title="${a.name}">${a.label}</span>`
-                ).join('');
-
-                roster.innerHTML += `
-                    <div class="player-row flex items-start p-3 border-b border-gray-800">
-                        <div class="w-32 shrink-0">
-                            <div class="font-bold text-sm text-white truncate">${b.name}</div>
-                            <div class="text-xs text-gray-500">${b.profession}</div>
-                        </div>
-                        <div class="flex-grow flex flex-wrap">
-                            ${abilitiesHtml.length ? abilitiesHtml : '<span class="text-gray-600 text-xs italic">No key details tracked</span>'}
-                        </div>
-                        <button onclick="deleteItem('${b.id}')" class="text-gray-600 hover:text-red-500 ml-2">×</button>
-                    </div>
-                `;
-            });
-
-            document.getElementById('count-display').innerText = builds.length;
-        }
-
-        window.deleteItem = async (id) => {
-            if(confirm("Delete this build?")) await deleteDoc(doc(db, "wvw_v3_builds", id));
-        }
-
-        window.processForm = (e) => {
-            e.preventDefault();
-            parseBuildCode();
-        }
-
-        init();
-    </script>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 max-w-screen-2xl mx-auto h-screen flex flex-col md:flex-row gap-4 overflow-hidden">
 
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="w-full md:w-1/4 bg-gray-900 p-4 rounded flex flex-col gap-3 shadow-lg border border-gray-800">
+        <h1 class="text-xl font-bold text-white">CMD INTEL <span class="text-yellow-500">V11</span></h1>
+        <div class="text-xs text-gray-500 flex justify-between"><span id="status">Initializing...</span></div>
         
-        <div class="lg:col-span-4 space-y-4">
-            <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-lg">
-                <h1 class="text-2xl font-bold text-white mb-1">COMMANDER INTEL <span class="text-green-500">V3</span></h1>
-                <div class="flex justify-between text-xs text-gray-400 mb-4">
-                    <span id="connection-status">Connecting...</span>
-                    <span>SQUAD: <b id="count-display" class="text-white">0</b></span>
-                </div>
-
-                <form onsubmit="processForm(event)">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Player Name</label>
-                    <input id="name-input" type="text" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm mb-3 focus:border-blue-500 outline-none" placeholder="Name">
-                    
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Template Code</label>
-                    <textarea id="code-input" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-green-400 font-mono text-xs mb-3 focus:border-blue-500 outline-none" placeholder="[&...]"></textarea>
-                    
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition shadow-lg">
-                        DECODE & ADD
-                    </button>
-                    <div id="api-status" class="text-xs text-yellow-500 mt-2 hidden text-center"></div>
-                </form>
-            </div>
-
-            <div class="bg-gray-900 p-4 rounded border border-gray-800 text-xs">
-                <div class="font-bold text-gray-500 mb-2 uppercase">Legend</div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-stab"></span> Stability</div>
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-water"></span> Water Field</div>
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-blast"></span> Blast Finisher</div>
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-strip"></span> Boon Strip</div>
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-pull"></span> Pull / CC</div>
-                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-reflect"></span> Reflect</div>
-                </div>
-            </div>
+        <div class="flex gap-2">
+            <button onclick="app.loadDemo()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold p-2 rounded flex-1">DEMO</button>
+            <button onclick="app.clearDB()" class="bg-red-900 hover:bg-red-700 text-white text-xs font-bold p-2 rounded">CLR</button>
         </div>
 
-        <div class="lg:col-span-8 space-y-6">
-            
-            <div>
-                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Squad Capabilities</h2>
-                <div id="capability-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    <div class="col-span-full text-center py-8 text-gray-600 border border-dashed border-gray-700 rounded">
-                        No data. Add builds to see squad composition.
-                    </div>
-                </div>
+        <form onsubmit="app.addBuild(event)" class="flex flex-col gap-2">
+            <input id="n" class="bg-gray-800 text-white p-2 rounded border border-gray-700 text-sm" placeholder="Name (e.g. Arc.1234)">
+            <textarea id="c" class="bg-gray-800 text-green-400 p-2 rounded border border-gray-700 font-mono text-xs h-24 focus:border-yellow-500 outline-none" placeholder="Paste Chat Code [&DQg...]"></textarea>
+            <button class="bg-blue-700 hover:bg-blue-600 text-white font-bold p-2 rounded shadow transition">ADD BUILD</button>
+        </form>
+        
+        <div class="flex-grow flex flex-col min-h-0">
+            <div class="font-bold text-gray-400 uppercase text-xs mb-1">Diagnostic Log</div>
+            <div id="debug-console" class="bg-black border border-gray-700 rounded p-2 text-[10px] font-mono overflow-y-auto flex-grow">
+                <div class="text-gray-500">System Ready.</div>
             </div>
-
-            <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                <div class="bg-gray-700 px-4 py-2 border-b border-gray-600 flex justify-between items-center">
-                    <span class="font-bold text-gray-200 text-sm">ACTIVE ROSTER</span>
-                    <span class="text-xs text-gray-400">Hover capabilities for details</span>
-                </div>
-                <div id="roster-list" class="max-h-[600px] overflow-y-auto">
-                    </div>
-            </div>
-
         </div>
-
     </div>
+
+    <div class="w-full md:w-1/2 flex flex-col gap-2">
+        <div class="bg-gray-900 p-2 rounded text-xs font-bold text-gray-400 text-center uppercase border border-gray-800">Squad Capabilities Matrix</div>
+        <div id="matrix" class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-2 overflow-y-auto p-1 content-start h-full bg-gray-900/50 rounded">
+            <div class="col-span-full text-center text-gray-600 mt-10">Waiting for Data...</div>
+        </div>
+    </div>
+
+    <div class="w-full md:w-1/4 bg-gray-900 flex flex-col border border-gray-800 rounded shadow-lg">
+        <div class="p-3 border-b border-gray-800 font-bold text-sm text-gray-300 bg-gray-800">Roster Details</div>
+        <div id="roster" class="overflow-y-auto flex-grow p-1">
+            </div>
+    </div>
+
+    <script>
+        // --- 1. COMPREHENSIVE FALLBACK PALETTES ---
+        // If API fails, we match these Palette IDs to Skill IDs.
+        const FALLBACK_PALETTES = {
+            "Guardian": { 
+                46: 9102, 53: 9081, 62: 9168, 59: 44946, 56: 44948, 
+                15: 9081, 158: 44946, 14: 9036, 16: 9168, 20: 9251, 17: 9102, 28: 30273, 156: 44948, 33: 9251
+            },
+            "Necromancer": { 
+                // Wells, Corrupts, Spectral
+                16: 10615, 17: 10625, 134: 10833, 152: 41386, 15: 10603, 52: 29518, 3: 10556,
+                37: 10615, 38: 10625, 42: 10603, 121: 10833, 145: 41386 // Common variants
+            },
+            "Warrior": { 
+                // Bubble, FGJ, Shake It
+                148: 14419, 144: 14402, 143: 14401, 142: 14389, 13: 14515,
+                14: 14402, 15: 14401, 63: 14419, 20: 14515
+            },
+            "Elementalist": { 
+                // Wash Pain, Mist Form, Flash, Tornado
+                158: 56983, 15: 5538, 18: 5651, 55: 5645, 160: 29969,
+                40: 5538, 43: 5651, 67: 5645
+            },
+            "Mesmer": { 
+                // Veil, Null, Grav Well, Portal
+                18: 10213, 20: 10236, 55: 30869, 16: 10201, 15: 10197, 13: 10311, 52: 29856,
+                30: 10213, 32: 10236, 34: 10201, 58: 30869
+            },
+            "Engineer": {
+                // Gyros, Kits
+                140: 30357, 144: 30806, 138: 6020, 6: 5837, 5: 5818, 59: 31167, 0: 5936, 
+                22: 5837, 21: 5818, 129: 30357 // Common variants
+            },
+            "Thief": {
+                // Shadow Refuge, Smoke Screen, Basilisk
+                22: 13082, 20: 13066, 30: 13132, 21: 13022, 154: 56925
+            },
+            "Ranger": {
+                // Entangle, Muddy, Spirits
+                23: 12569, 24: 12580, 32: 12523, 138: 30379, 143: 31914
+            },
+            "Revenant": {
+                // Roads, Phase
+                107: 27326, 104: 26685, 108: 27975
+            }
+        };
+
+        // --- 2. SKILL DB (Added 'n' property for Tooltips) ---
+        const SKILL_DB = {
+            // Guardian
+            9081: { l: "STAB", n: "\"Stand Your Ground!\"", c: "t-stab" }, 
+            44946: { l: "STAB", n: "Mantra of Liberation", c: "t-stab" }, 
+            9036: { l: "STAB", n: "Hallowed Ground", c: "t-stab" },
+            9168: { l: "REFLECT", n: "Wall of Reflection", c: "t-reflect" }, 
+            9251: { l: "SANCTUARY", n: "Sanctuary", c: "t-cc" }, 
+            9102: { l: "FIRE FIELD", n: "Purging Flames", c: "t-fire" },
+            44948: { l: "MIGHT", n: "Mantra of Potence", c: "t-might" }, 
+            30273: { l: "PULL", n: "Dragon's Maw", c: "t-pull" }, 
+            45400: { l: "CLEANSE", n: "Chapter 2: Ashes", c: "t-cleanse" },
+            // Warrior
+            14419: { l: "BUBBLE", n: "Winds of Disenchantment", c: "t-bubble" }, 
+            14402: { l: "BLAST", n: "For Great Justice!", c: "t-blast" }, 
+            14401: { l: "CLEANSE", n: "Shake It Off!", c: "t-cleanse" },
+            14389: { l: "REZ", n: "Battle Standard", c: "t-res" }, 
+            14515: { l: "CC", n: "Bull's Charge", c: "t-cc" },
+            // Engineer
+            5837: { l: "BLAST", n: "Bomb Kit", c: "t-blast" }, 
+            30357: { l: "REFLECT", n: "Bulwark Gyro", c: "t-reflect" }, 
+            30806: { l: "STEALTH", n: "Sneak Gyro", c: "t-stealth" },
+            6020: { l: "REZ", n: "Function Gyro", c: "t-res" }, 
+            5818: { l: "CLEANSE", n: "Elixir Gun", c: "t-cleanse" }, 
+            5821: { l: "SMOKE", n: "Flamethrower", c: "t-smoke" },
+            31167: { l: "CC", n: "Supply Crate", c: "t-cc" }, 
+            5936: { l: "WATER", n: "Mortar Kit", c: "t-water" },
+            // Ranger
+            12523: { l: "FIRE", n: "Bonfire", c: "t-fire" }, 
+            12569: { l: "IMMOB", n: "Entangle", c: "t-immob" }, 
+            12580: { l: "IMMOB", n: "Muddy Terrain", c: "t-immob" },
+            30379: { l: "STAB", n: "Glyph of Equality", c: "t-stab" }, 
+            31914: { l: "REZ", n: "Spirit of Nature", c: "t-res" },
+            // Thief
+            13082: { l: "STEALTH", n: "Shadow Refuge", c: "t-stealth" }, 
+            13066: { l: "SMOKE", n: "Smoke Screen", c: "t-smoke" }, 
+            13132: { l: "CC", n: "Basilisk Venom", c: "t-cc" },
+            13022: { l: "STATIC", n: "Seal Area/Pitfall", c: "t-static" }, 
+            56925: { l: "IMMOB", n: "Thousand Needles", c: "t-immob" },
+            // Elementalist
+            56983: { l: "CLEANSE", n: "Wash the Pain Away!", c: "t-cleanse" }, 
+            5538: { l: "STEALTH", n: "Mist Form", c: "t-stealth" }, 
+            5651: { l: "STEALTH", n: "Lightning Flash", c: "t-stealth" },
+            5516: { l: "STEALTH", n: "Vapor Form", c: "t-stealth" }, 
+            5569: { l: "REZ", n: "Glyph of Renewal", c: "t-res" }, 
+            5645: { l: "CC", n: "Tornado", c: "t-cc" },
+            29969: { l: "REZ", n: "Rebound", c: "t-res" },
+            // Mesmer
+            10213: { l: "STEALTH", n: "Veil", c: "t-stealth" }, 
+            10236: { l: "PORTAL", n: "Portal Entre", c: "t-portal" }, 
+            30869: { l: "PULL", n: "Gravity Well", c: "t-pull" },
+            10201: { l: "STRIP", n: "Null Field", c: "t-strip" }, 
+            10197: { l: "REFLECT", n: "Feedback", c: "t-reflect" }, 
+            10311: { l: "STEALTH", n: "Mass Invisibility", c: "t-stealth" },
+            29856: { l: "STAB", n: "Well of Precognition", c: "t-stab" },
+            // Necro
+            10615: { l: "STRIP", n: "Well of Corruption", c: "t-strip" }, 
+            10625: { l: "FIRE", n: "Well of Suffering", c: "t-fire" }, 
+            10833: { l: "PULL", n: "Spectral Grasp", c: "t-pull" },
+            41386: { l: "PORTAL", n: "Sand Swell", c: "t-portal" }, 
+            10603: { l: "REFLECT", n: "Corrosive Poison Cloud", c: "t-reflect" }, 
+            29518: { l: "STRIP", n: "Ghastly Breach", c: "t-strip" },
+            10556: { l: "CC", n: "Flesh Golem", c: "t-cc" },
+            // Revenant
+            27326: { l: "STAB", n: "Rite of the Great Dwarf", c: "t-stab" }, 
+            27975: { l: "STAB", n: "Pain Absorption", c: "t-stab" }, 
+            26685: { l: "BLAST", n: "Phase Traversal", c: "t-blast" }
+        };
+
+        // --- 3. WEAPON DB ---
+        const WEAPON_DB = {
+            1: { 9: [{l:"CC", n:"Staff (Line)", c:"t-cc"}, {l:"LIGHT", n:"Staff (Symbol)", c:"t-light"}, {l:"BLAST", n:"Staff (Empower)", c:"t-blast"}], 14: [{l:"IMMOB", n:"Scepter", c:"t-immob"}], 26: [{l:"CC", n:"Hammer", c:"t-cc"}, {l:"BLAST", n:"Hammer", c:"t-blast"}], 25: [{l:"BLAST", n:"Focus", c:"t-blast"}, {l:"LIGHT", n:"Focus", c:"t-light"}], 0: [{l:"PULL", n:"Greatsword", c:"t-pull"}], 29: [{l:"CC", n:"Shield (Bubble)", c:"t-cc"}] },
+            2: { 26: [{l:"CC", n:"Hammer", c:"t-cc"}, {l:"BLAST", n:"Hammer", c:"t-blast"}], 24: [{l:"CLEANSE", n:"Warhorn", c:"t-cleanse"}, {l:"BLAST", n:"Warhorn", c:"t-blast"}], 29: [{l:"BLOCK", n:"Shield", c:"t-block"}] },
+            3: { 29: [{l:"BLAST", n:"Shield", c:"t-blast"}, {l:"REFLECT", n:"Shield", c:"t-reflect"}], 26: [{l:"BLAST", n:"Hammer", c:"t-blast"}, {l:"BLOCK", n:"Hammer", c:"t-block"}] },
+            4: { 9: [{l:"WATER", n:"Staff", c:"t-water"}, {l:"BLAST", n:"Staff", c:"t-blast"}, {l:"REFLECT", n:"Staff (Wall)", c:"t-reflect"}], 24: [{l:"BLAST", n:"Warhorn", c:"t-blast"}] },
+            5: { 33: [{l:"BLAST", n:"Shortbow", c:"t-blast"}, {l:"DARK", n:"Shortbow (Poison)", c:"t-dark"}], 22: [{l:"STEALTH", n:"Dagger (Cloak)", c:"t-stealth"}] },
+            6: { 9: [{l:"WATER", n:"Staff", c:"t-water"}, {l:"FIRE", n:"Staff", c:"t-fire"}, {l:"STATIC", n:"Staff", c:"t-static"}, {l:"BLAST", n:"Staff", c:"t-blast"}], 24: [{l:"WATER", n:"Warhorn", c:"t-water"}], 25: [{l:"BLOCK", n:"Focus", c:"t-block"}], 34: [{l:"REFLECT", n:"Focus (Magnetic)", c:"t-reflect"}] },
+            7: { 25: [{l:"PULL", n:"Focus", c:"t-pull"}], 29: [{l:"BLAST", n:"Shield", c:"t-blast"}], 9: [{l:"ETHEREAL", n:"Staff", c:"t-ethereal"}] },
+            8: { 9: [{l:"BLAST", n:"Staff", c:"t-blast"}, {l:"CC", n:"Staff (Fear)", c:"t-cc"}, {l:"WATER", n:"Staff (Regen)", c:"t-water"}], 24: [{l:"CC", n:"Warhorn", c:"t-cc"}], 25: [{l:"STRIP", n:"Focus", c:"t-strip"}] },
+            9: { 26: [{l:"BLAST", n:"Hammer", c:"t-blast"}, {l:"CC", n:"Hammer", c:"t-cc"}], 9: [{l:"CLEANSE", n:"Staff", c:"t-cleanse"}, {l:"BLAST", n:"Staff", c:"t-blast"}] }
+        };
+
+        const PROFS = { 1:"Guardian", 2:"Warrior", 3:"Engineer", 4:"Ranger", 5:"Thief", 6:"Elementalist", 7:"Mesmer", 8:"Necromancer", 9:"Revenant" };
+
+        // ============================
+        // APP LOGIC
+        // ============================
+        const app = {
+            db: null,
+            auth: null,
+            paletteCache: {},
+            
+            log: function(msg, type) {
+                const c = document.getElementById('debug-console');
+                if(!c) return;
+                const color = type === "error" ? "text-red-400" : (type === "success" ? "text-green-400" : (type === "warn" ? "text-yellow-400" : "text-gray-400"));
+                c.innerHTML += `<div class="${color} border-b border-gray-800 pb-1 mb-1">${msg}</div>`;
+                c.scrollTop = c.scrollHeight;
+            },
+
+            init: function() {
+                this.log("Initializing Firebase...");
+                
+                // --- FIREBASE CONFIG ---
+                const firebaseConfig = {
+                    // PASTE KEYS HERE
+                    apiKey: "AIzaSyCp-Fg7QvdRmZ5I6mduyUYW7seuhdcdifc",
+                    authDomain: "wvw-commander.firebaseapp.com",
+                    projectId: "wvw-commander",
+                    storageBucket: "wvw-commander.firebasestorage.app",
+                    messagingSenderId: "1055181288368",
+                    appId: "1:1055181288368:web:20e9b9a17b0d7a70aa1c75"
+                };
+
+                try {
+                    firebase.initializeApp(firebaseConfig);
+                    this.db = firebase.firestore();
+                    this.auth = firebase.auth();
+                    
+                    this.auth.signInAnonymously().catch(e => this.log("Auth Error: " + e.message, "error"));
+                    this.auth.onAuthStateChanged(u => {
+                        if(u) {
+                            this.log("Firebase Connected!", "success");
+                            document.getElementById('status').innerHTML = '<span class="text-green-400">● Online</span>';
+                            this.setupSync();
+                        }
+                    });
+                } catch(e) {
+                    this.log("CRITICAL CONFIG ERROR. Check Keys.", "error");
+                }
+            },
+
+            setupSync: function() {
+                this.db.collection("wvw_v11_builds").orderBy("timestamp", "desc").onSnapshot(snap => {
+                    const builds = [];
+                    snap.forEach(d => builds.push({ id: d.id, ...d.data() }));
+                    this.render(builds);
+                });
+            },
+
+            loadDemo: async function() {
+                this.log("Generating Demo Data...", "warn");
+                const demoSkills = [
+                    SKILL_DB[9081], SKILL_DB[9102], 
+                    {l:"BLAST", n:"Staff (Empower)", c:"t-blast"},
+                    {l:"CC", n:"Staff (Line)", c:"t-cc"}
+                ];
+                await this.db.collection("wvw_v11_builds").add({
+                    name: "Demo Commander", prof: "Guardian", skills: demoSkills, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            },
+
+            clearDB: async function() {
+                if(!confirm("Clear all?")) return;
+                const snap = await this.db.collection("wvw_v11_builds").get();
+                snap.forEach(d => d.ref.delete());
+                this.log("Database Cleared.", "warn");
+            },
+
+            getPalette: async function(prof) {
+                if(this.paletteCache[prof]) return this.paletteCache[prof];
+                this.log(`Fetching API for ${prof}...`);
+                try {
+                    const r = await fetch(`https://api.guildwars2.com/v2/professions/${prof}`);
+                    const d = await r.json();
+                    const map = {};
+                    if (d.skills_by_palette) d.skills_by_palette.forEach(p => map[p[0]] = p[1]);
+                    this.paletteCache[prof] = map;
+                    this.log("API Success", "success");
+                    return map;
+                } catch(e) {
+                    this.log("API Fail/Blocked. Using Fallback.", "error");
+                    return FALLBACK_PALETTES[prof] || null;
+                }
+            },
+
+            addBuild: async function(e) {
+                e.preventDefault();
+                const code = document.getElementById('c').value.trim();
+                const name = document.getElementById('n').value.trim() || "Agent";
+                if(!code.startsWith('[&')) return this.log("Invalid Code", "error");
+
+                try {
+                    const b64 = code.replace(/^\[&|\]$/g, '').replace(/-/g, '+').replace(/_/g, '/');
+                    const bin = window.atob(b64);
+                    const bytes = new Uint8Array(bin.length);
+                    for(let i=0; i<bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                    const v = new DataView(bytes.buffer);
+
+                    const profId = v.getUint8(1);
+                    const profName = PROFS[profId];
+                    this.log(`Decoding ${profName}...`);
+
+                    const map = await this.getPalette(profName);
+                    const skills = [];
+
+                    if(map) {
+                        const offsets = [11, 13, 15, 17];
+                        offsets.forEach(o => {
+                            if(bytes.length >= o+2) {
+                                const pid = v.getUint16(o, true);
+                                if (pid > 5000) return;
+
+                                const sid = map[pid];
+                                if(SKILL_DB[sid]) {
+                                    skills.push(SKILL_DB[sid]);
+                                    this.log(`+ ${SKILL_DB[sid].n}`, "success");
+                                } else {
+                                    this.log(`Unmapped Pal: ${pid}`, "warn");
+                                }
+                            }
+                        });
+                    }
+
+                    // Weapons
+                    [21,22,23,24].forEach(o => {
+                        if(bytes.length > o) {
+                            const wid = v.getUint8(o);
+                            if(wid !== 0 && WEAPON_DB[profId] && WEAPON_DB[profId][wid]) {
+                                WEAPON_DB[profId][wid].forEach(s => {
+                                    skills.push(s);
+                                    this.log(`+ ${s.n}`, "success");
+                                });
+                            }
+                        }
+                    });
+
+                    await this.db.collection("wvw_v11_builds").add({
+                        name, prof: profName, skills, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    document.getElementById('c').value = "";
+                } catch(err) {
+                    this.log("Parse Error: " + err.message, "error");
+                }
+            },
+
+            del: async function(id) {
+                await this.db.collection("wvw_v11_builds").doc(id).delete();
+            },
+
+            render: function(builds) {
+                const tally = {};
+                builds.forEach(b => {
+                    if(b.skills) b.skills.forEach(s => {
+                        if(!tally[s.l]) tally[s.l] = { count: 0, c: s.c, details: [] };
+                        tally[s.l].count++;
+                        // New Tooltip Logic: Name + Skill Source
+                        tally[s.l].details.push(`${b.name}: ${s.n}`);
+                    });
+                });
+
+                const grid = document.getElementById('matrix');
+                grid.innerHTML = "";
+                if(Object.keys(tally).length === 0) grid.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Waiting for Data...</div>';
+
+                Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count).forEach(k => {
+                    const t = tally[k];
+                    grid.innerHTML += `
+                    <div class="bg-gray-800 border border-gray-700 p-2 rounded flex flex-col items-center relative group cursor-help shadow-md select-none">
+                        <div class="tag ${t.c} mb-1">${k}</div>
+                        <div class="text-xl font-bold text-white">${t.count}</div>
+                        <div class="hidden group-hover:block absolute bottom-full mb-2 bg-black border border-gray-600 p-2 rounded z-50 text-[10px] text-gray-300 whitespace-pre w-48 text-left shadow-xl">
+                            ${t.details.join('\n')}
+                        </div>
+                    </div>`;
+                });
+
+                const list = document.getElementById('roster');
+                list.innerHTML = "";
+                builds.forEach(b => {
+                    const tags = b.skills ? b.skills.map(s => `<span class="tag ${s.c}" title="${s.n}">${s.l}</span>`).join('') : '';
+                    list.innerHTML += `
+                    <div class="flex items-center p-2 border-b border-gray-800 hover:bg-gray-800 transition">
+                        <div class="w-24 shrink-0 text-xs">
+                            <div class="font-bold text-white truncate">${b.name}</div>
+                            <div class="text-gray-500">${b.prof}</div>
+                        </div>
+                        <div class="flex-grow flex flex-wrap gap-1">${tags}</div>
+                        <button onclick="app.del('${b.id}')" class="ml-2 text-gray-600 hover:text-red-500 font-bold text-lg">×</button>
+                    </div>`;
+                });
+            }
+        };
+
+        app.init();
+    </script>
 </body>
 </html>
