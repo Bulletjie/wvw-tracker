@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GW2 WvW Commander Dashboard (Final)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #c9d1d9; }
+        .build-card { background-color: #161b22; border: 1px solid #30363d; }
+        
+        /* Badges & Status Indicators */
+        .ability-badge { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 4px; font-size: 0.70rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #111; }
+        
+        /* Commander Callout Categories (High Contrast) */
+        .cat-stab { background-color: #00d4ff; box-shadow: 0 0 5px #00d4ff80; } /* Cyan - Stability */
+        .cat-cleanse { background-color: #ffd700; } /* Gold - Cleanse */
+        .cat-stun { background-color: #d8b4fe; } /* Purple - Stunbreak */
+        .cat-strip { background-color: #ff7b72; } /* Red - Strip/CC */
+        .cat-water { background-color: #3b82f6; color: white; } /* Blue - Water Fields */
+        .cat-blast { background-color: #f97316; color: white; } /* Orange - Blast */
+        .cat-reflect { background-color: #cbd5e1; } /* Grey - Reflects */
+        .cat-res { background-color: #bef264; } /* Lime - Res Fields */
+        .cat-static { background-color: #e879f9; } /* Pink - Static/Walls */
+
+        .tally-header { background-color: #21262d; position: sticky; top: 0; z-index: 10; }
+        .tally-row:nth-child(even) { background-color: #161b22; }
+        
+        /* Highlight for high numbers in the dashboard */
+        .count-good { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.3); }
+        .count-low { color: #fbbf24; }
+        .count-zero { color: #4b5563; }
+    </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- 1. PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCp-Fg7QvdRmZ5I6mduyUYW7seuhdcdifc",
+            authDomain: "wvw-commander.firebaseapp.com",
+            projectId: "wvw-commander",
+            storageBucket: "wvw-commander.firebasestorage.app",
+            messagingSenderId: "1055181288368",
+            appId: "1:1055181288368:web:20e9b9a17b0d7a70aa1c75"
+        };
+        // ------------------------------------------
+
+        // Define the skills we want to track for the Commander
+        // Format: ID (Uint16 for utility, Uint8 for weapon), Name, Category
+        const WvW_DATA = [
+            // --- GUARDIAN / FIREBRAND ---
+            { id: 9081, name: "\"Stand Your Ground!\"", cat: "cat-stab", label: "STAB (Group)" },
+            { id: 44946, name: "Mantra of Liberation", cat: "cat-stab", label: "STAB (Mantra)" },
+            { id: 9036, name: "Hallowed Ground", cat: "cat-stab", label: "STAB (Stationary)" },
+            { id: 9168, name: "Wall of Reflection", cat: "cat-reflect", label: "Reflect Wall" },
+            { id: 14, name: "Scepter (Symbol)", cat: "cat-blast", label: "Fire Field" }, // Weapon
+            { id: 9, name: "Staff (Line)", cat: "cat-static", label: "Line of Warding" }, // Weapon
+
+            // --- NECRO / SCOURGE ---
+            { id: 10615, name: "Well of Corruption", cat: "cat-strip", label: "Boon Strip" },
+            { id: 10625, name: "Well of Suffering", cat: "cat-strip", label: "DPS Well" },
+            { id: 41386, name: "Sand Swell", cat: "cat-static", label: "Portal (Scourge)" },
+            { id: 10833, name: "Spectral Grasp", cat: "cat-static", label: "Pull (Grasp)" },
+            { id: 10603, name: "Corrosive Poison Cloud", cat: "cat-reflect", label: "Proj Block" },
+            { id: 9, name: "Staff (Marks)", cat: "cat-static", label: "Fear Mark" }, // Weapon
+
+            // --- ENGI / SCRAPPER ---
+            { id: 30357, name: "Bulwark Gyro", cat: "cat-reflect", label: "Dome (Reflect)" },
+            { id: 30806, name: "Sneak Gyro", cat: "cat-static", label: "Stealth Gyro" },
+            { id: 5837, name: "Bomb Kit", cat: "cat-blast", label: "Blast Source" },
+            { id: 6020, name: "Function Gyro", cat: "cat-res", label: "Res Gyro" }, 
+            { id: 5818, name: "Elixir Gun", cat: "cat-cleanse", label: "Cleanse Field" },
+
+            // --- ELE / TEMPEST ---
+            { id: 5538, name: "Mist Form", cat: "cat-stun", label: "Mist Form" },
+            { id: 5651, name: "Lightning Flash", cat: "cat-stun", label: "Blink" },
+            { id: 5619, name: "Tornado", cat: "cat-static", label: "CC (Tornado)" },
+            { id: 56983, name: "Wash the Pain Away!", cat: "cat-water", label: "Water Shout" },
+            { id: 9, name: "Staff (Water)", cat: "cat-water", label: "Water Fields" }, // Weapon
+            { id: 24, name: "Warhorn (Water)", cat: "cat-water", label: "Water Globe" }, // Weapon
+
+            // --- MESMER / CHRONO ---
+            { id: 10236, name: "Portal Entre", cat: "cat-static", label: "Portal" },
+            { id: 10213, name: "Veil", cat: "cat-static", label: "Veil (Stealth)" },
+            { id: 30869, name: "Gravity Well", cat: "cat-strip", label: "Grav Well" },
+            { id: 10201, name: "Null Field", cat: "cat-strip", label: "Null Field" },
+            { id: 25, name: "Focus", cat: "cat-static", label: "Pull (Focus)" }, // Weapon
+
+            // --- REVENANT / VINDI ---
+            { id: 27326, name: "Rite of the Great Dwarf", cat: "cat-stun", label: "The Road" },
+            { id: 26685, name: "Phase Traversal", cat: "cat-stun", label: "Port/Chase" },
+            { id: 26, name: "Hammer", cat: "cat-static", label: "Ranged CC" }, // Weapon
+        ];
+
+        // Quick Lookup Maps
+        const UTILITY_MAP = {};
+        const WEAPON_MAP = {};
+        WvW_DATA.forEach(item => {
+            if(item.id < 255 && item.cat) WEAPON_MAP[item.id] = item; // Rough logic: Weapons are Uint8
+            else UTILITY_MAP[item.id] = item;
+        });
+
+        // --- APP LOGIC ---
+        let app, db, auth, userId;
+
+        async function init() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if(user) {
+                        userId = user.uid;
+                        setupLiveSync();
+                        document.getElementById('status').innerHTML = `<span class="text-green-400">● Online</span>`;
+                    }
+                });
+            } catch(e) {
+                document.getElementById('status').innerHTML = `<span class="text-red-400">Configuration Error: Update lines 75-82!</span>`;
+            }
+        }
+
+        function setupLiveSync() {
+            const q = query(collection(db, "commander_builds"));
+            onSnapshot(q, (snapshot) => {
+                const builds = [];
+                snapshot.forEach(doc => builds.push({ id: doc.id, ...doc.data() }));
+                renderDashboard(builds);
+                renderRoster(builds);
+            });
+        }
+
+        // --- DECODER (THE BRAIN) ---
+        function parseTemplate(code) {
+            try {
+                // 1. Clean Base64
+                const base64 = code.replace(/^\[&|\]$/g, '').replace(/-/g, '+').replace(/_/g, '/');
+                const binaryString = window.atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                const view = new DataView(bytes.buffer);
+
+                // 2. Basic Profession ID (Byte 1)
+                const profId = view.getUint8(1);
+                
+                // 3. Detect Skills
+                const foundSkills = new Set();
+                const weaponOffsets = [21, 22, 23, 24];
+                const utilityOffsets = [13, 15, 17, 19]; // 19 is Elite
+
+                // Check Weapons
+                weaponOffsets.forEach(offset => {
+                    if(bytes.length > offset) {
+                        const wId = view.getUint8(offset);
+                        if(WEAPON_MAP[wId]) foundSkills.add(WEAPON_MAP[wId]);
+                    }
+                });
+
+                // Check Utilities (Uint16)
+                utilityOffsets.forEach(offset => {
+                    if(bytes.length >= offset + 2) {
+                        const uId = view.getUint16(offset, true);
+                        if(UTILITY_MAP[uId]) foundSkills.add(UTILITY_MAP[uId]);
+                    }
+                });
+
+                // 4. Heuristic Elite Spec Detection (Simple Method)
+                // Instead of complex binary parsing, we check for signature skills or profession
+                let specName = "Core";
+                const skillsArr = Array.from(foundSkills);
+                
+                if(profId === 1) { // Guardian
+                    specName = skillsArr.some(s => s.name.includes("Mantra")) ? "Firebrand" : "Guardian";
+                } else if(profId === 9) { // Necro
+                    specName = skillsArr.some(s => s.name.includes("Sand")) ? "Scourge" : "Reaper/Core";
+                } else if(profId === 4) { // Engi
+                    specName = skillsArr.some(s => s.name.includes("Gyro")) ? "Scrapper" : "Holo/Core";
+                } else if(profId === 7) { // Ele
+                    specName = skillsArr.some(s => s.name.includes("Wash")) ? "Tempest" : "Weaver/Core";
+                }
+
+                return {
+                    profession: specName,
+                    skills: skillsArr
+                };
+
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        }
+
+        // --- UI RENDERING ---
+        function renderDashboard(builds) {
+            const tally = {};
+            WvW_DATA.forEach(d => tally[d.label] = { count: 0, cat: d.cat });
+
+            builds.forEach(b => {
+                if(b.skills) {
+                    b.skills.forEach(s => {
+                        if(tally[s.label]) tally[s.label].count++;
+                    });
+                }
+            });
+
+            // Sort by count
+            const sortedKeys = Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count);
+            
+            const tbody = document.getElementById('tally-body');
+            tbody.innerHTML = '';
+            
+            sortedKeys.forEach(key => {
+                const item = tally[key];
+                if(item.count === 0) return; // Hide empty categories to save space
+                
+                let countClass = item.count >= 5 ? 'count-good' : (item.count > 0 ? 'count-low' : 'count-zero');
+                
+                tbody.innerHTML += `
+                    <tr class="tally-row border-b border-gray-700">
+                        <td class="p-3">
+                            <span class="ability-badge ${item.cat}">${key}</span>
+                        </td>
+                        <td class="p-3 text-right text-xl font-bold ${countClass}">${item.count}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('total-count').innerText = builds.length;
+        }
+
+        function renderRoster(builds) {
+            const container = document.getElementById('roster');
+            container.innerHTML = '';
+            
+            builds.forEach(b => {
+                const skillBadges = b.skills.map(s => `<span class="ability-badge ${s.cat}">${s.label}</span>`).join('');
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-3 rounded mb-2 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white">${b.name} <span class="text-gray-400 text-sm font-normal">(${b.profession})</span></div>
+                            <div class="mt-1">${skillBadges}</div>
+                        </div>
+                        <button onclick="deleteBuild('${b.id}')" class="text-gray-500 hover:text-red-500 px-2">✕</button>
+                    </div>
+                `;
+            });
+        }
+
+        // --- GLOBAL FUNCTIONS ---
+        window.addBuild = async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('code-input').value;
+            const name = document.getElementById('name-input').value;
+            
+            const data = parseTemplate(code);
+            if(!data) { alert("Invalid GW2 Code"); return; }
+            
+            await addDoc(collection(db, "commander_builds"), {
+                name: name || "Unknown",
+                profession: data.profession,
+                skills: data.skills,
+                code: code,
+                timestamp: serverTimestamp()
+            });
+            document.getElementById('add-form').reset();
+        };
+
+        window.deleteBuild = async (id) => {
+            if(confirm("Remove this build?")) {
+                await deleteDoc(doc(db, "commander_builds", id));
+            }
+        };
+
+        init();
+    </script>
+</head>
+<body class="bg-gray-900 min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-white">WvW Commander <span class="text-green-400">Tracker</span></h1>
+                    <div id="status" class="text-sm mt-1 text-gray-400">Connecting...</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-400 uppercase tracking-widest">Squad Size</div>
+                    <div id="total-count" class="text-5xl font-mono font-bold text-white">0</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+                <div class="p-4 bg-gray-700 border-b border-gray-600 font-bold text-gray-200">Squad Capabilities Matrix</div>
+                <table class="w-full text-left">
+                    <tbody id="tally-body">
+                        <tr><td class="p-8 text-center text-gray-500" colspan="2">Waiting for builds...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="build-card p-5 rounded-xl shadow-lg">
+                <h2 class="font-bold text-white mb-3">Add Player Build</h2>
+                <form id="add-form" onsubmit="addBuild(event)">
+                    <input id="name-input" type="text" placeholder="Player Name (e.g. Arc.1234)" class="w-full mb-2 p-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-green-500 outline-none" required>
+                    <textarea id="code-input" rows="3" placeholder="Paste Chat Code [&DQg...]" class="w-full mb-3 p-2 bg-gray-900 border border-gray-600 rounded font-mono text-xs text-green-400 focus:border-green-500 outline-none" required></textarea>
+                    <button type="submit" class="w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition">Pars & Add</button>
+                </form>
+            </div>
+
+            <div>
+                <h3 class="text-gray-400 font-bold uppercase text-xs tracking-wider mb-2">Detailed Roster</h3>
+                <div id="roster" class="max-h-[500px] overflow-y-auto pr-2">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
