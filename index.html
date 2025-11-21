@@ -3,42 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GW2 WvW Commander Dashboard (Final)</title>
+    <title>WvW Commander Intel V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #c9d1d9; }
-        .build-card { background-color: #161b22; border: 1px solid #30363d; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f1115; color: #cfd3d8; }
         
-        /* Badges & Status Indicators */
-        .ability-badge { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 4px; font-size: 0.70rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #111; }
+        /* Categories & Chips */
+        .tag-base { font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; }
+        .tag-field { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
         
-        /* Commander Callout Categories (High Contrast) */
-        .cat-stab { background-color: #00d4ff; box-shadow: 0 0 5px #00d4ff80; } /* Cyan - Stability */
-        .cat-cleanse { background-color: #ffd700; } /* Gold - Cleanse */
-        .cat-stun { background-color: #d8b4fe; } /* Purple - Stunbreak */
-        .cat-strip { background-color: #ff7b72; } /* Red - Strip/CC */
-        .cat-water { background-color: #3b82f6; color: white; } /* Blue - Water Fields */
-        .cat-blast { background-color: #f97316; color: white; } /* Orange - Blast */
-        .cat-reflect { background-color: #cbd5e1; } /* Grey - Reflects */
-        .cat-res { background-color: #bef264; } /* Lime - Res Fields */
-        .cat-static { background-color: #e879f9; } /* Pink - Static/Walls */
+        /* Specific Effect Colors */
+        .ef-stab { background: #0ea5e9; color: #000; box-shadow: 0 0 8px rgba(14, 165, 233, 0.4); } /* Stability - Cyan */
+        .ef-water { background: #3b82f6; color: #fff; } /* Water Field - Blue */
+        .ef-fire { background: #ef4444; color: #fff; } /* Fire Field - Red */
+        .ef-blast { background: #f97316; color: #fff; } /* Blast - Orange */
+        .ef-cleanse { background: #eab308; color: #000; } /* Cleanse - Yellow */
+        .ef-strip { background: #a855f7; color: #fff; } /* Strip - Purple */
+        .ef-pull { background: #ec4899; color: #fff; } /* Pull - Pink */
+        .ef-stealth { background: #64748b; color: #fff; } /* Stealth - Grey */
 
-        .tally-header { background-color: #21262d; position: sticky; top: 0; z-index: 10; }
-        .tally-row:nth-child(even) { background-color: #161b22; }
+        .player-row { transition: background 0.2s; }
+        .player-row:hover { background: #1f2937; }
         
-        /* Highlight for high numbers in the dashboard */
-        .count-good { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.3); }
-        .count-low { color: #fbbf24; }
-        .count-zero { color: #4b5563; }
+        /* Loading Spinner */
+        .loader { border: 3px solid #374151; border-top: 3px solid #10b981; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // --- 1. PASTE YOUR FIREBASE CONFIG HERE ---
+
+        // --- COMMANDER DATABASE (The "Good Stuff") ---
+        // We map specific SKILL IDs (not palette IDs) to metadata.
+        const SKILL_META = {
+            // --- GUARDIAN ---
+            9081: { name: "\"Stand Your Ground!\"", type: "Utility", effect: "ef-stab", label: "STABILITY" },
+            9036: { name: "Hallowed Ground", type: "Utility", effect: "ef-stab", label: "STAB (Field)" },
+            9168: { name: "Wall of Reflection", type: "Utility", effect: "ef-reflect", label: "REFLECT" },
+            44946: { name: "Mantra of Liberation", type: "Utility", effect: "ef-stab", label: "STAB (Mantra)" },
+            
+            // --- NECROMANCER ---
+            10615: { name: "Well of Corruption", type: "Utility", effect: "ef-strip", label: "STRIP (Well)" },
+            10625: { name: "Well of Suffering", type: "Utility", effect: "ef-strip", label: "DPS (Well)" },
+            10833: { name: "Spectral Grasp", type: "Utility", effect: "ef-pull", label: "PULL (5x)" },
+            41386: { name: "Sand Swell", type: "Utility", effect: "ef-stealth", label: "PORTAL" },
+            10603: { name: "Corrosive Poison Cloud", type: "Utility", effect: "ef-reflect", label: "BLOCK PROJ" },
+
+            // --- ELEMENTALIST ---
+            56983: { name: "Wash the Pain Away!", type: "Utility", effect: "ef-cleanse", label: "CLEANSE" },
+            5538: { name: "Mist Form", type: "Utility", effect: "ef-stealth", label: "MIST FORM" },
+            5651: { name: "Lightning Flash", type: "Utility", effect: "ef-stealth", label: "BLINK" },
+            
+            // --- ENGINEER ---
+            5837: { name: "Bomb Kit", type: "Utility", effect: "ef-blast", label: "BLAST SOURCE" },
+            30357: { name: "Bulwark Gyro", type: "Utility", effect: "ef-reflect", label: "DOME" },
+            30806: { name: "Sneak Gyro", type: "Utility", effect: "ef-stealth", label: "STEALTH GYRO" },
+            5818: { name: "Elixir Gun", type: "Utility", effect: "ef-cleanse", label: "CLEANSE FIELD" },
+            6020: { name: "Function Gyro", type: "Utility", effect: "ef-cleanse", label: "RES GYRO" },
+
+            // --- MESMER ---
+            10213: { name: "Veil", type: "Utility", effect: "ef-stealth", label: "VEIL" },
+            30869: { name: "Gravity Well", type: "Utility", effect: "ef-pull", label: "GRAV WELL" },
+            10201: { name: "Null Field", type: "Utility", effect: "ef-strip", label: "STRIP FIELD" },
+            10236: { name: "Portal Entre", type: "Utility", effect: "ef-stealth", label: "PORTAL" },
+
+            // --- REVENANT ---
+            27326: { name: "Rite of the Great Dwarf", type: "Utility", effect: "ef-stab", label: "THE ROAD" },
+            26685: { name: "Phase Traversal", type: "Utility", effect: "ef-blast", label: "CHASE" }
+        };
+
+        // --- WEAPON INFERENCE (Automatic Capabilities based on Class + Weapon) ---
+        // ID: 9=Staff, 14=Scepter, 25=Focus, 24=Warhorn, 26=Hammer, 0=Sword
+        const WEAPON_CAPABILITIES = {
+            1: { // Guardian
+                9: [{ label: "LINE WARDING", effect: "ef-pull" }, { label: "LIGHT FIELD", effect: "ef-cleanse" }],
+                14: [{ label: "IMMOB", effect: "ef-pull" }], // Scepter
+                26: [{ label: "BLAST", effect: "ef-blast" }] // Hammer
+            },
+            7: { // Elementalist
+                9: [{ label: "WATER FIELDS", effect: "ef-water" }, { label: "BLAST", effect: "ef-blast" }, { label: "STATIC", effect: "ef-pull" }], // Staff
+                24: [{ label: "WATER GLOBE", effect: "ef-water" }] // Warhorn
+            },
+            9: { // Necromancer
+                9: [{ label: "FEAR MARK", effect: "ef-pull" }, { label: "REGEN MARK", effect: "ef-water" }] // Staff
+            },
+            4: { // Engineer
+                 // Hammer (Scrapper) is ID 0 or Elite Spec specific, usually inferred by Spec
+            }
+        };
+
+        const PROFESSION_NAMES = {
+            1: "Guardian", 2: "Warrior", 3: "Engineer", 4: "Ranger", 5: "Thief", 
+            6: "Elementalist", 7: "Mesmer", 8: "Necromancer", 9: "Revenant"
+        };
+
+        // --- CONFIG ---
         const firebaseConfig = {
+            // PASTE YOUR KEYS HERE
             apiKey: "AIzaSyCp-Fg7QvdRmZ5I6mduyUYW7seuhdcdifc",
             authDomain: "wvw-commander.firebaseapp.com",
             projectId: "wvw-commander",
@@ -46,65 +109,10 @@
             messagingSenderId: "1055181288368",
             appId: "1:1055181288368:web:20e9b9a17b0d7a70aa1c75"
         };
-        // ------------------------------------------
 
-        // Define the skills we want to track for the Commander
-        // Format: ID (Uint16 for utility, Uint8 for weapon), Name, Category
-        const WvW_DATA = [
-            // --- GUARDIAN / FIREBRAND ---
-            { id: 9081, name: "\"Stand Your Ground!\"", cat: "cat-stab", label: "STAB (Group)" },
-            { id: 44946, name: "Mantra of Liberation", cat: "cat-stab", label: "STAB (Mantra)" },
-            { id: 9036, name: "Hallowed Ground", cat: "cat-stab", label: "STAB (Stationary)" },
-            { id: 9168, name: "Wall of Reflection", cat: "cat-reflect", label: "Reflect Wall" },
-            { id: 14, name: "Scepter (Symbol)", cat: "cat-blast", label: "Fire Field" }, // Weapon
-            { id: 9, name: "Staff (Line)", cat: "cat-static", label: "Line of Warding" }, // Weapon
-
-            // --- NECRO / SCOURGE ---
-            { id: 10615, name: "Well of Corruption", cat: "cat-strip", label: "Boon Strip" },
-            { id: 10625, name: "Well of Suffering", cat: "cat-strip", label: "DPS Well" },
-            { id: 41386, name: "Sand Swell", cat: "cat-static", label: "Portal (Scourge)" },
-            { id: 10833, name: "Spectral Grasp", cat: "cat-static", label: "Pull (Grasp)" },
-            { id: 10603, name: "Corrosive Poison Cloud", cat: "cat-reflect", label: "Proj Block" },
-            { id: 9, name: "Staff (Marks)", cat: "cat-static", label: "Fear Mark" }, // Weapon
-
-            // --- ENGI / SCRAPPER ---
-            { id: 30357, name: "Bulwark Gyro", cat: "cat-reflect", label: "Dome (Reflect)" },
-            { id: 30806, name: "Sneak Gyro", cat: "cat-static", label: "Stealth Gyro" },
-            { id: 5837, name: "Bomb Kit", cat: "cat-blast", label: "Blast Source" },
-            { id: 6020, name: "Function Gyro", cat: "cat-res", label: "Res Gyro" }, 
-            { id: 5818, name: "Elixir Gun", cat: "cat-cleanse", label: "Cleanse Field" },
-
-            // --- ELE / TEMPEST ---
-            { id: 5538, name: "Mist Form", cat: "cat-stun", label: "Mist Form" },
-            { id: 5651, name: "Lightning Flash", cat: "cat-stun", label: "Blink" },
-            { id: 5619, name: "Tornado", cat: "cat-static", label: "CC (Tornado)" },
-            { id: 56983, name: "Wash the Pain Away!", cat: "cat-water", label: "Water Shout" },
-            { id: 9, name: "Staff (Water)", cat: "cat-water", label: "Water Fields" }, // Weapon
-            { id: 24, name: "Warhorn (Water)", cat: "cat-water", label: "Water Globe" }, // Weapon
-
-            // --- MESMER / CHRONO ---
-            { id: 10236, name: "Portal Entre", cat: "cat-static", label: "Portal" },
-            { id: 10213, name: "Veil", cat: "cat-static", label: "Veil (Stealth)" },
-            { id: 30869, name: "Gravity Well", cat: "cat-strip", label: "Grav Well" },
-            { id: 10201, name: "Null Field", cat: "cat-strip", label: "Null Field" },
-            { id: 25, name: "Focus", cat: "cat-static", label: "Pull (Focus)" }, // Weapon
-
-            // --- REVENANT / VINDI ---
-            { id: 27326, name: "Rite of the Great Dwarf", cat: "cat-stun", label: "The Road" },
-            { id: 26685, name: "Phase Traversal", cat: "cat-stun", label: "Port/Chase" },
-            { id: 26, name: "Hammer", cat: "cat-static", label: "Ranged CC" }, // Weapon
-        ];
-
-        // Quick Lookup Maps
-        const UTILITY_MAP = {};
-        const WEAPON_MAP = {};
-        WvW_DATA.forEach(item => {
-            if(item.id < 255 && item.cat) WEAPON_MAP[item.id] = item; // Rough logic: Weapons are Uint8
-            else UTILITY_MAP[item.id] = item;
-        });
-
-        // --- APP LOGIC ---
-        let app, db, auth, userId;
+        // --- APP STATE ---
+        let app, db, auth;
+        let PALETTE_CACHE = {}; // Stores API results: { 'Guardian': { 12: 9081 }, ... }
 
         async function init() {
             try {
@@ -115,211 +123,255 @@
                 
                 onAuthStateChanged(auth, (user) => {
                     if(user) {
-                        userId = user.uid;
                         setupLiveSync();
-                        document.getElementById('status').innerHTML = `<span class="text-green-400">● Online</span>`;
+                        document.getElementById('connection-status').innerHTML = '<span class="text-green-400 font-bold">● ONLINE</span>';
                     }
                 });
             } catch(e) {
-                document.getElementById('status').innerHTML = `<span class="text-red-400">Configuration Error: Update lines 75-82!</span>`;
+                console.error(e);
+                document.getElementById('connection-status').innerHTML = '<span class="text-red-500">CONFIG ERROR</span>';
             }
         }
 
         function setupLiveSync() {
-            const q = query(collection(db, "commander_builds"));
-            onSnapshot(q, (snapshot) => {
+            onSnapshot(query(collection(db, "wvw_v3_builds")), (snapshot) => {
                 const builds = [];
                 snapshot.forEach(doc => builds.push({ id: doc.id, ...doc.data() }));
-                renderDashboard(builds);
-                renderRoster(builds);
+                renderUI(builds);
             });
         }
 
-        // --- DECODER (THE BRAIN) ---
-        function parseTemplate(code) {
+        // --- API & DECODER ---
+        async function getPaletteMap(professionName) {
+            if (PALETTE_CACHE[professionName]) return PALETTE_CACHE[professionName];
+
+            const statusEl = document.getElementById('api-status');
+            statusEl.innerHTML = `<span class="loader"></span> Fetching ${professionName} data...`;
+            statusEl.classList.remove('hidden');
+
             try {
-                // 1. Clean Base64
+                const res = await fetch(`https://api.guildwars2.com/v2/professions/${professionName}`);
+                const data = await res.json();
+                
+                // Build Map: { PaletteID: SkillID }
+                const map = {};
+                // The API returns [ [paletteId, skillId], ... ] in data.skills_by_palette
+                data.skills_by_palette.forEach(pair => {
+                    map[pair[0]] = pair[1];
+                });
+                
+                PALETTE_CACHE[professionName] = map;
+                statusEl.classList.add('hidden');
+                return map;
+            } catch (e) {
+                console.error("API Error", e);
+                statusEl.textContent = "API Error";
+                return null;
+            }
+        }
+
+        async function parseBuildCode() {
+            const code = document.getElementById('code-input').value.trim();
+            const name = document.getElementById('name-input').value.trim() || "Unknown Agent";
+            
+            if (!code.startsWith('[&') || !code.endsWith(']')) {
+                alert("Invalid Code Format"); return;
+            }
+
+            try {
+                // 1. Base64 Decode
                 const base64 = code.replace(/^\[&|\]$/g, '').replace(/-/g, '+').replace(/_/g, '/');
                 const binaryString = window.atob(base64);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
                 const view = new DataView(bytes.buffer);
 
-                // 2. Basic Profession ID (Byte 1)
+                // 2. Get Profession
                 const profId = view.getUint8(1);
-                
-                // 3. Detect Skills
-                const foundSkills = new Set();
-                const weaponOffsets = [21, 22, 23, 24];
-                const utilityOffsets = [13, 15, 17, 19]; // 19 is Elite
+                const professionName = PROFESSION_NAMES[profId] || "Unknown";
 
-                // Check Weapons
+                // 3. Fetch Palette Map for this Profession (The Magic Fix)
+                const paletteMap = await getPaletteMap(professionName);
+                if (!paletteMap) { alert("Could not fetch GW2 data. Check internet."); return; }
+
+                // 4. Decode Utilities (Offsets 13, 15, 17, 19(Elite))
+                const detectedAbilities = [];
+                const utilityOffsets = [13, 15, 17, 19];
+                
+                utilityOffsets.forEach(offset => {
+                    if(bytes.length >= offset + 2) {
+                        const paletteId = view.getUint16(offset, true); // Little Endian
+                        const skillId = paletteMap[paletteId]; // CONVERT PALETTE TO SKILL ID
+                        
+                        if (skillId && SKILL_META[skillId]) {
+                            detectedAbilities.push(SKILL_META[skillId]);
+                        }
+                    }
+                });
+
+                // 5. Decode Weapons (Offsets 21, 22) & Infer Capabilities
+                const weaponOffsets = [21, 22, 23, 24];
                 weaponOffsets.forEach(offset => {
                     if(bytes.length > offset) {
                         const wId = view.getUint8(offset);
-                        if(WEAPON_MAP[wId]) foundSkills.add(WEAPON_MAP[wId]);
+                        // Check specific weapon capabilities
+                        if(WEAPON_CAPABILITIES[profId] && WEAPON_CAPABILITIES[profId][wId]) {
+                            WEAPON_CAPABILITIES[profId][wId].forEach(cap => {
+                                detectedAbilities.push({
+                                    name: "Weapon Skill",
+                                    label: cap.label,
+                                    effect: cap.effect,
+                                    type: "Weapon"
+                                });
+                            });
+                        }
                     }
                 });
 
-                // Check Utilities (Uint16)
-                utilityOffsets.forEach(offset => {
-                    if(bytes.length >= offset + 2) {
-                        const uId = view.getUint16(offset, true);
-                        if(UTILITY_MAP[uId]) foundSkills.add(UTILITY_MAP[uId]);
-                    }
+                // 6. Save to DB
+                await addDoc(collection(db, "wvw_v3_builds"), {
+                    name: name,
+                    profession: professionName,
+                    abilities: detectedAbilities,
+                    rawCode: code,
+                    timestamp: serverTimestamp()
                 });
 
-                // 4. Heuristic Elite Spec Detection (Simple Method)
-                // Instead of complex binary parsing, we check for signature skills or profession
-                let specName = "Core";
-                const skillsArr = Array.from(foundSkills);
+                document.getElementById('code-input').value = '';
                 
-                if(profId === 1) { // Guardian
-                    specName = skillsArr.some(s => s.name.includes("Mantra")) ? "Firebrand" : "Guardian";
-                } else if(profId === 9) { // Necro
-                    specName = skillsArr.some(s => s.name.includes("Sand")) ? "Scourge" : "Reaper/Core";
-                } else if(profId === 4) { // Engi
-                    specName = skillsArr.some(s => s.name.includes("Gyro")) ? "Scrapper" : "Holo/Core";
-                } else if(profId === 7) { // Ele
-                    specName = skillsArr.some(s => s.name.includes("Wash")) ? "Tempest" : "Weaver/Core";
-                }
-
-                return {
-                    profession: specName,
-                    skills: skillsArr
-                };
-
             } catch (e) {
                 console.error(e);
-                return null;
+                alert("Parsing failed. Code might be corrupted.");
             }
         }
 
-        // --- UI RENDERING ---
-        function renderDashboard(builds) {
+        // --- RENDERERS ---
+        function renderUI(builds) {
+            // 1. Dashboard Tally
             const tally = {};
-            WvW_DATA.forEach(d => tally[d.label] = { count: 0, cat: d.cat });
-
             builds.forEach(b => {
-                if(b.skills) {
-                    b.skills.forEach(s => {
-                        if(tally[s.label]) tally[s.label].count++;
+                if(b.abilities) {
+                    b.abilities.forEach(a => {
+                        if(!tally[a.label]) tally[a.label] = { count: 0, effect: a.effect, sources: [] };
+                        tally[a.label].count++;
+                        tally[a.label].sources.push(b.name); // Track who has it
                     });
                 }
             });
 
-            // Sort by count
-            const sortedKeys = Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count);
+            const grid = document.getElementById('capability-grid');
+            grid.innerHTML = '';
             
-            const tbody = document.getElementById('tally-body');
-            tbody.innerHTML = '';
-            
-            sortedKeys.forEach(key => {
+            Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count).forEach(key => {
                 const item = tally[key];
-                if(item.count === 0) return; // Hide empty categories to save space
+                // Create tooltop list of names
+                const sourceList = item.sources.join('\n');
                 
-                let countClass = item.count >= 5 ? 'count-good' : (item.count > 0 ? 'count-low' : 'count-zero');
-                
-                tbody.innerHTML += `
-                    <tr class="tally-row border-b border-gray-700">
-                        <td class="p-3">
-                            <span class="ability-badge ${item.cat}">${key}</span>
-                        </td>
-                        <td class="p-3 text-right text-xl font-bold ${countClass}">${item.count}</td>
-                    </tr>
-                `;
-            });
-            
-            document.getElementById('total-count').innerText = builds.length;
-        }
-
-        function renderRoster(builds) {
-            const container = document.getElementById('roster');
-            container.innerHTML = '';
-            
-            builds.forEach(b => {
-                const skillBadges = b.skills.map(s => `<span class="ability-badge ${s.cat}">${s.label}</span>`).join('');
-                container.innerHTML += `
-                    <div class="bg-gray-800 p-3 rounded mb-2 flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-white">${b.name} <span class="text-gray-400 text-sm font-normal">(${b.profession})</span></div>
-                            <div class="mt-1">${skillBadges}</div>
-                        </div>
-                        <button onclick="deleteBuild('${b.id}')" class="text-gray-500 hover:text-red-500 px-2">✕</button>
+                grid.innerHTML += `
+                    <div class="bg-gray-800 border border-gray-700 p-3 rounded flex flex-col items-center justify-center shadow cursor-help" title="Sources:\n${sourceList}">
+                        <div class="tag-base ${item.effect} mb-1 px-2 py-1 text-xs">${key}</div>
+                        <div class="text-2xl font-bold text-white">${item.count}</div>
                     </div>
                 `;
             });
+
+            // 2. Detailed Roster
+            const roster = document.getElementById('roster-list');
+            roster.innerHTML = '';
+            
+            builds.forEach(b => {
+                const abilitiesHtml = b.abilities.map(a => 
+                    `<span class="tag-base ${a.effect} mr-1 mb-1 inline-block" title="${a.name}">${a.label}</span>`
+                ).join('');
+
+                roster.innerHTML += `
+                    <div class="player-row flex items-start p-3 border-b border-gray-800">
+                        <div class="w-32 shrink-0">
+                            <div class="font-bold text-sm text-white truncate">${b.name}</div>
+                            <div class="text-xs text-gray-500">${b.profession}</div>
+                        </div>
+                        <div class="flex-grow flex flex-wrap">
+                            ${abilitiesHtml.length ? abilitiesHtml : '<span class="text-gray-600 text-xs italic">No key details tracked</span>'}
+                        </div>
+                        <button onclick="deleteItem('${b.id}')" class="text-gray-600 hover:text-red-500 ml-2">×</button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('count-display').innerText = builds.length;
         }
 
-        // --- GLOBAL FUNCTIONS ---
-        window.addBuild = async (e) => {
-            e.preventDefault();
-            const code = document.getElementById('code-input').value;
-            const name = document.getElementById('name-input').value;
-            
-            const data = parseTemplate(code);
-            if(!data) { alert("Invalid GW2 Code"); return; }
-            
-            await addDoc(collection(db, "commander_builds"), {
-                name: name || "Unknown",
-                profession: data.profession,
-                skills: data.skills,
-                code: code,
-                timestamp: serverTimestamp()
-            });
-            document.getElementById('add-form').reset();
-        };
+        window.deleteItem = async (id) => {
+            if(confirm("Delete this build?")) await deleteDoc(doc(db, "wvw_v3_builds", id));
+        }
 
-        window.deleteBuild = async (id) => {
-            if(confirm("Remove this build?")) {
-                await deleteDoc(doc(db, "commander_builds", id));
-            }
-        };
+        window.processForm = (e) => {
+            e.preventDefault();
+            parseBuildCode();
+        }
 
         init();
     </script>
 </head>
-<body class="bg-gray-900 min-h-screen">
+<body class="p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <div class="lg:col-span-2 space-y-6">
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">WvW Commander <span class="text-green-400">Tracker</span></h1>
-                    <div id="status" class="text-sm mt-1 text-gray-400">Connecting...</div>
+        <div class="lg:col-span-4 space-y-4">
+            <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-lg">
+                <h1 class="text-2xl font-bold text-white mb-1">COMMANDER INTEL <span class="text-green-500">V3</span></h1>
+                <div class="flex justify-between text-xs text-gray-400 mb-4">
+                    <span id="connection-status">Connecting...</span>
+                    <span>SQUAD: <b id="count-display" class="text-white">0</b></span>
                 </div>
-                <div class="text-right">
-                    <div class="text-sm text-gray-400 uppercase tracking-widest">Squad Size</div>
-                    <div id="total-count" class="text-5xl font-mono font-bold text-white">0</div>
-                </div>
-            </div>
 
-            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
-                <div class="p-4 bg-gray-700 border-b border-gray-600 font-bold text-gray-200">Squad Capabilities Matrix</div>
-                <table class="w-full text-left">
-                    <tbody id="tally-body">
-                        <tr><td class="p-8 text-center text-gray-500" colspan="2">Waiting for builds...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="space-y-6">
-            <div class="build-card p-5 rounded-xl shadow-lg">
-                <h2 class="font-bold text-white mb-3">Add Player Build</h2>
-                <form id="add-form" onsubmit="addBuild(event)">
-                    <input id="name-input" type="text" placeholder="Player Name (e.g. Arc.1234)" class="w-full mb-2 p-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-green-500 outline-none" required>
-                    <textarea id="code-input" rows="3" placeholder="Paste Chat Code [&DQg...]" class="w-full mb-3 p-2 bg-gray-900 border border-gray-600 rounded font-mono text-xs text-green-400 focus:border-green-500 outline-none" required></textarea>
-                    <button type="submit" class="w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition">Pars & Add</button>
+                <form onsubmit="processForm(event)">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Player Name</label>
+                    <input id="name-input" type="text" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm mb-3 focus:border-blue-500 outline-none" placeholder="Name">
+                    
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Template Code</label>
+                    <textarea id="code-input" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-green-400 font-mono text-xs mb-3 focus:border-blue-500 outline-none" placeholder="[&...]"></textarea>
+                    
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition shadow-lg">
+                        DECODE & ADD
+                    </button>
+                    <div id="api-status" class="text-xs text-yellow-500 mt-2 hidden text-center"></div>
                 </form>
             </div>
 
+            <div class="bg-gray-900 p-4 rounded border border-gray-800 text-xs">
+                <div class="font-bold text-gray-500 mb-2 uppercase">Legend</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-stab"></span> Stability</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-water"></span> Water Field</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-blast"></span> Blast Finisher</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-strip"></span> Boon Strip</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-pull"></span> Pull / CC</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded mr-2 ef-reflect"></span> Reflect</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+            
             <div>
-                <h3 class="text-gray-400 font-bold uppercase text-xs tracking-wider mb-2">Detailed Roster</h3>
-                <div id="roster" class="max-h-[500px] overflow-y-auto pr-2">
+                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Squad Capabilities</h2>
+                <div id="capability-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    <div class="col-span-full text-center py-8 text-gray-600 border border-dashed border-gray-700 rounded">
+                        No data. Add builds to see squad composition.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <div class="bg-gray-700 px-4 py-2 border-b border-gray-600 flex justify-between items-center">
+                    <span class="font-bold text-gray-200 text-sm">ACTIVE ROSTER</span>
+                    <span class="text-xs text-gray-400">Hover capabilities for details</span>
+                </div>
+                <div id="roster-list" class="max-h-[600px] overflow-y-auto">
                     </div>
             </div>
+
         </div>
 
     </div>
