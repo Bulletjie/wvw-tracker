@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WvW Commander V12 (Instant Fix)</title>
+    <title>WvW Commander V15 (Dual Sets + Labels)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -14,32 +14,32 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0b0d10; color: #cfd3d8; }
         
-        /* TAGS */
-        .tag { font-size: 0.65rem; font-weight: 800; padding: 3px 6px; border-radius: 3px; text-transform: uppercase; white-space: nowrap; margin: 1px; display: inline-block; cursor: help; }
+        /* TAGS - NOW WIDER TO FIT TEXT */
+        .tag { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; white-space: nowrap; margin: 1px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.2); }
+        .tag-source { font-weight: 400; opacity: 0.9; font-size: 0.6rem; text-transform: none; letter-spacing: 0.5px; color: rgba(255,255,255,0.9); border-left: 1px solid rgba(255,255,255,0.3); padding-left: 4px; }
         
         /* COLORS */
-        .t-fire { background: #450a0a; color: #fca5a5; border: 1px solid #ef4444; }
-        .t-water { background: #172554; color: #93c5fd; border: 1px solid #3b82f6; }
-        .t-blast { background: #431407; color: #fdba74; border: 1px solid #f97316; }
-        .t-stab { background: #083344; color: #67e8f9; border: 1px solid #06b6d4; box-shadow: 0 0 4px #06b6d4; } 
-        .t-cleanse { background: #422006; color: #fde047; border: 1px solid #eab308; }
-        .t-res { background: #14532d; color: #bef264; border: 1px solid #84cc16; }
-        .t-reflect { background: #1e293b; color: #e2e8f0; border: 1px solid #94a3b8; }
-        .t-block { background: #334155; color: #cbd5e1; border: 1px solid #64748b; }
-        .t-might { background: #450a0a; color: #fda4af; border: 1px solid #f43f5e; }
-        .t-strip { background: #3b0764; color: #d8b4fe; border: 1px solid #a855f7; }
-        .t-pull { background: #500724; color: #f9a8d4; border: 1px solid #ec4899; }
-        .t-cc { background: #881337; color: #fda4af; border: 1px solid #f43f5e; }
-        .t-immob { background: #052e16; color: #86efac; border: 1px solid #22c55e; }
+        .t-fire { background: #450a0a; color: #fca5a5; border-color: #ef4444; }
+        .t-water { background: #172554; color: #93c5fd; border-color: #3b82f6; }
+        .t-blast { background: #431407; color: #fdba74; border-color: #f97316; }
+        .t-stab { background: #083344; color: #67e8f9; border-color: #06b6d4; box-shadow: 0 0 4px #06b6d4; } 
+        .t-cleanse { background: #422006; color: #fde047; border-color: #eab308; }
+        .t-res { background: #14532d; color: #bef264; border-color: #84cc16; }
+        .t-reflect { background: #1e293b; color: #e2e8f0; border-color: #94a3b8; }
+        .t-block { background: #334155; color: #cbd5e1; border-color: #64748b; }
+        .t-might { background: #450a0a; color: #fda4af; border-color: #f43f5e; }
+        .t-strip { background: #3b0764; color: #d8b4fe; border-color: #a855f7; }
+        .t-pull { background: #500724; color: #f9a8d4; border-color: #ec4899; }
+        .t-cc { background: #881337; color: #fda4af; border-color: #f43f5e; }
+        .t-immob { background: #052e16; color: #86efac; border-color: #22c55e; }
         .t-bubble { background: #713f12; color: #fef08a; border: 2px solid #facc15; animation: pulse 1.5s infinite; }
-        .t-portal { background: #2e1065; color: #c4b5fd; border: 1px solid #8b5cf6; }
-        .t-stealth { background: #1f2937; color: #d1d5db; border: 1px solid #4b5563; }
-        .t-static { background: #4a044e; color: #f0abfc; border: 1px solid #d946ef; }
-        .t-light { background: #422006; color: #fde047; border: 1px solid #eab308; }
-        .t-ethereal { background: #3b0764; color: #e9d5ff; border: 1px solid #a855f7; }
+        .t-portal { background: #2e1065; color: #c4b5fd; border-color: #8b5cf6; }
+        .t-stealth { background: #1f2937; color: #d1d5db; border-color: #4b5563; }
+        .t-static { background: #4a044e; color: #f0abfc; border-color: #d946ef; }
+        .t-light { background: #422006; color: #fde047; border-color: #eab308; }
+        .t-ethereal { background: #3b0764; color: #e9d5ff; border-color: #a855f7; }
+        .t-smoke { background: #18181b; color: #71717a; border-color: #52525b; }
 
-        /* Active Filter State */
-        .matrix-box:active { transform: scale(0.95); }
         .filter-active { border-color: #fff !important; background: #374151 !important; }
         
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0); } 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
@@ -48,7 +48,7 @@
 <body class="p-4 max-w-screen-2xl mx-auto h-screen flex flex-col md:flex-row gap-4 overflow-hidden">
 
     <div class="w-full md:w-1/4 bg-gray-900 p-4 rounded flex flex-col gap-3 shadow-lg border border-gray-800">
-        <h1 class="text-xl font-bold text-white">CMD INTEL <span class="text-blue-500">V12</span></h1>
+        <h1 class="text-xl font-bold text-white">CMD INTEL <span class="text-red-500">V15</span></h1>
         <div class="text-xs text-gray-500 flex justify-between"><span id="status">Initializing...</span></div>
         
         <div class="flex gap-2">
@@ -57,13 +57,36 @@
         </div>
 
         <form onsubmit="app.addBuild(event)" class="flex flex-col gap-2">
-            <input id="n" class="bg-gray-800 text-white p-2 rounded border border-gray-700 text-sm" placeholder="Name (e.g. Arc.1234)">
-            <textarea id="c" class="bg-gray-800 text-green-400 p-2 rounded border border-gray-700 font-mono text-xs h-24 focus:border-blue-500 outline-none" placeholder="Paste Chat Code [&DQg...]"></textarea>
-            <button class="bg-blue-700 hover:bg-blue-600 text-white font-bold p-2 rounded shadow transition">ADD BUILD</button>
+            <input id="n" class="bg-gray-800 text-white p-2 rounded border border-gray-700 text-sm focus:border-red-500 outline-none" placeholder="Name (e.g. Arc.1234)">
+            <textarea id="c" class="bg-gray-800 text-green-400 p-2 rounded border border-gray-700 font-mono text-xs h-16 focus:border-red-500 outline-none" placeholder="Paste Chat Code [&DQg...]"></textarea>
+            
+            <div class="text-[10px] text-gray-400 uppercase font-bold mt-1 border-t border-gray-700 pt-2">Weapon Set Configuration</div>
+            
+            <div class="grid grid-cols-3 gap-1">
+                <select id="w1" class="bg-gray-800 text-white p-1 rounded border border-gray-700 text-[10px] focus:border-red-500 outline-none weapon-select">
+                    <option value="">Slot 1</option>
+                    <optgroup label="2-Hand"><option value="Staff">Staff</option><option value="Hammer">Hammer</option><option value="GS">Greatsword</option><option value="Longbow">Longbow</option><option value="Shortbow">Shortbow</option><option value="Rifle">Rifle</option></optgroup>
+                    <optgroup label="1-Hand"><option value="Scepter">Scepter</option><option value="Axe">Axe</option><option value="Sword">Sword</option><option value="Mace">Mace</option><option value="Dagger">Dagger</option><option value="Pistol">Pistol</option><option value="Focus">Focus</option><option value="Shield">Shield</option><option value="Warhorn">Warhorn</option><option value="Torch">Torch</option></optgroup>
+                </select>
+
+                <select id="w2" class="bg-gray-800 text-white p-1 rounded border border-gray-700 text-[10px] focus:border-red-500 outline-none weapon-select">
+                    <option value="">Slot 2</option>
+                    <optgroup label="2-Hand"><option value="Staff">Staff</option><option value="Hammer">Hammer</option><option value="GS">Greatsword</option><option value="Longbow">Longbow</option><option value="Shortbow">Shortbow</option><option value="Rifle">Rifle</option></optgroup>
+                    <optgroup label="1-Hand"><option value="Scepter">Scepter</option><option value="Axe">Axe</option><option value="Sword">Sword</option><option value="Mace">Mace</option><option value="Dagger">Dagger</option><option value="Pistol">Pistol</option><option value="Focus">Focus</option><option value="Shield">Shield</option><option value="Warhorn">Warhorn</option><option value="Torch">Torch</option></optgroup>
+                </select>
+
+                <select id="w3" class="bg-gray-800 text-white p-1 rounded border border-gray-700 text-[10px] focus:border-red-500 outline-none weapon-select">
+                    <option value="">Slot 3</option>
+                    <optgroup label="2-Hand"><option value="Staff">Staff</option><option value="Hammer">Hammer</option><option value="GS">Greatsword</option><option value="Longbow">Longbow</option><option value="Shortbow">Shortbow</option><option value="Rifle">Rifle</option></optgroup>
+                    <optgroup label="1-Hand"><option value="Scepter">Scepter</option><option value="Axe">Axe</option><option value="Sword">Sword</option><option value="Mace">Mace</option><option value="Dagger">Dagger</option><option value="Pistol">Pistol</option><option value="Focus">Focus</option><option value="Shield">Shield</option><option value="Warhorn">Warhorn</option><option value="Torch">Torch</option></optgroup>
+                </select>
+            </div>
+
+            <button id="btn-add" class="bg-blue-700 hover:bg-blue-600 text-white font-bold p-2 rounded shadow transition mt-2">ADD BUILD</button>
         </form>
         
         <div class="flex-grow flex flex-col min-h-0">
-            <div class="font-bold text-gray-400 uppercase text-xs mb-1">Status Log</div>
+            <div class="font-bold text-gray-400 uppercase text-xs mb-1">System Log</div>
             <div id="debug-console" class="bg-black border border-gray-700 rounded p-2 text-[10px] font-mono overflow-y-auto flex-grow">
                 <div class="text-gray-500">System Ready.</div>
             </div>
@@ -90,7 +113,7 @@
     </div>
 
     <script>
-        // --- 1. FALLBACK DB (Offline/Safe Mode) ---
+        // --- 1. FALLBACK DB ---
         const FALLBACK_PALETTES = {
             "Guardian": { 46: 9102, 53: 9081, 62: 9168, 59: 44946, 56: 44948, 15: 9081, 158: 44946, 14: 9036, 16: 9168, 20: 9251, 17: 9102, 28: 30273, 156: 44948, 33: 9251 },
             "Necromancer": { 16: 10615, 17: 10625, 134: 10833, 152: 41386, 15: 10603, 52: 29518, 3: 10556, 37: 10615, 38: 10625, 42: 10603, 121: 10833, 145: 41386 },
@@ -103,49 +126,55 @@
             "Revenant": { 107: 27326, 104: 26685, 108: 27975 }
         };
 
-        // --- 2. SKILL DEFINITIONS (Short Name + Tooltip Name) ---
+        // SKILL DB (Short label for matrix, 'n' for roster tag)
         const SKILL_DB = {
             9081: { l: "STAB", n: "SYG", c: "t-stab" }, 44946: { l: "STAB", n: "Mantra", c: "t-stab" }, 9036: { l: "STAB", n: "Field", c: "t-stab" },
             9168: { l: "REFLECT", n: "Wall", c: "t-reflect" }, 9251: { l: "CC", n: "Sanctuary", c: "t-cc" }, 9102: { l: "FIRE", n: "Purging", c: "t-fire" },
-            44948: { l: "MIGHT", n: "Potence", c: "t-might" }, 30273: { l: "PULL", n: "Dragons Maw", c: "t-pull" }, 45400: { l: "CLEANSE", n: "Ashes", c: "t-cleanse" },
+            44948: { l: "MIGHT", n: "Potence", c: "t-might" }, 30273: { l: "PULL", n: "Maw", c: "t-pull" }, 45400: { l: "CLEANSE", n: "Ashes", c: "t-cleanse" },
             14419: { l: "BUBBLE", n: "Winds", c: "t-bubble" }, 14402: { l: "BLAST", n: "FGJ", c: "t-blast" }, 14401: { l: "CLEANSE", n: "Shake It", c: "t-cleanse" },
             14389: { l: "REZ", n: "Banner", c: "t-res" }, 14515: { l: "CC", n: "Bull's", c: "t-cc" },
             5837: { l: "BLAST", n: "Bomb Kit", c: "t-blast" }, 30357: { l: "REFLECT", n: "Bulwark", c: "t-reflect" }, 30806: { l: "STEALTH", n: "Sneak", c: "t-stealth" },
-            6020: { l: "REZ", n: "Function", c: "t-res" }, 5818: { l: "CLEANSE", n: "Elixir Gun", c: "t-cleanse" }, 5821: { l: "SMOKE", n: "Flamethrower", c: "t-smoke" },
-            31167: { l: "CC", n: "Supply Crate", c: "t-cc" }, 5936: { l: "WATER", n: "Mortar", c: "t-water" },
+            6020: { l: "REZ", n: "Func Gyro", c: "t-res" }, 5818: { l: "CLEANSE", n: "Elixir", c: "t-cleanse" }, 5821: { l: "SMOKE", n: "Flamethrow", c: "t-smoke" },
+            31167: { l: "CC", n: "Crate", c: "t-cc" }, 5936: { l: "WATER", n: "Mortar", c: "t-water" },
             12523: { l: "FIRE", n: "Bonfire", c: "t-fire" }, 12569: { l: "IMMOB", n: "Entangle", c: "t-immob" }, 12580: { l: "IMMOB", n: "Muddy", c: "t-immob" },
             30379: { l: "STAB", n: "Glyph", c: "t-stab" }, 31914: { l: "REZ", n: "Spirit", c: "t-res" },
             13082: { l: "STEALTH", n: "Refuge", c: "t-stealth" }, 13066: { l: "SMOKE", n: "Screen", c: "t-smoke" }, 13132: { l: "CC", n: "Basilisk", c: "t-cc" },
             13022: { l: "STATIC", n: "Seal/Pit", c: "t-static" }, 56925: { l: "IMMOB", n: "Needles", c: "t-immob" },
-            56983: { l: "CLEANSE", n: "Wash Pain", c: "t-cleanse" }, 5538: { l: "STEALTH", n: "Mist Form", c: "t-stealth" }, 5651: { l: "STEALTH", n: "Flash", c: "t-stealth" },
+            56983: { l: "CLEANSE", n: "Wash", c: "t-cleanse" }, 5538: { l: "STEALTH", n: "Mist", c: "t-stealth" }, 5651: { l: "STEALTH", n: "Flash", c: "t-stealth" },
             5516: { l: "STEALTH", n: "Vapor", c: "t-stealth" }, 5569: { l: "REZ", n: "Glyph", c: "t-res" }, 5645: { l: "CC", n: "Tornado", c: "t-cc" },
             29969: { l: "REZ", n: "Rebound", c: "t-res" },
-            10213: { l: "STEALTH", n: "Veil", c: "t-stealth" }, 10236: { l: "PORTAL", n: "Entre", c: "t-portal" }, 30869: { l: "PULL", n: "Gravity", c: "t-pull" },
+            10213: { l: "STEALTH", n: "Veil", c: "t-stealth" }, 10236: { l: "PORTAL", n: "Portal", c: "t-portal" }, 30869: { l: "PULL", n: "Grav Well", c: "t-pull" },
             10201: { l: "STRIP", n: "Null", c: "t-strip" }, 10197: { l: "REFLECT", n: "Feedback", c: "t-reflect" }, 10311: { l: "STEALTH", n: "Mass Invis", c: "t-stealth" },
             29856: { l: "STAB", n: "Precog", c: "t-stab" },
-            10615: { l: "STRIP", n: "Well Corrupt", c: "t-strip" }, 10625: { l: "FIRE", n: "Well Suffer", c: "t-fire" }, 10833: { l: "PULL", n: "Grasp", c: "t-pull" },
+            10615: { l: "STRIP", n: "Well Corr", c: "t-strip" }, 10625: { l: "FIRE", n: "Well Suff", c: "t-fire" }, 10833: { l: "PULL", n: "Grasp", c: "t-pull" },
             41386: { l: "PORTAL", n: "Sand Swell", c: "t-portal" }, 10603: { l: "REFLECT", n: "CPC", c: "t-reflect" }, 29518: { l: "STRIP", n: "Ghastly", c: "t-strip" },
             10556: { l: "CC", n: "Golem", c: "t-cc" },
-            27326: { l: "STAB", n: "Roads", c: "t-stab" }, 27975: { l: "STAB", n: "Pain Absorb", c: "t-stab" }, 26685: { l: "BLAST", n: "Phase", c: "t-blast" }
+            27326: { l: "STAB", n: "Roads", c: "t-stab" }, 27975: { l: "STAB", n: "Pain Abs", c: "t-stab" }, 26685: { l: "BLAST", n: "Phase", c: "t-blast" }
         };
 
-        const WEAPON_DB = {
-            1: { 9: [{l:"CC", n:"Line", c:"t-cc"}, {l:"LIGHT", n:"Symbol", c:"t-light"}, {l:"BLAST", n:"Empower", c:"t-blast"}], 14: [{l:"IMMOB", n:"Scepter", c:"t-immob"}], 26: [{l:"CC", n:"Hammer", c:"t-cc"}, {l:"BLAST", n:"Hammer", c:"t-blast"}], 25: [{l:"BLAST", n:"Focus", c:"t-blast"}, {l:"LIGHT", n:"Focus", c:"t-light"}], 0: [{l:"PULL", n:"GS", c:"t-pull"}], 29: [{l:"CC", n:"Shield", c:"t-cc"}] },
-            2: { 26: [{l:"CC", n:"Hammer", c:"t-cc"}, {l:"BLAST", n:"Hammer", c:"t-blast"}], 24: [{l:"CLEANSE", n:"Warhorn", c:"t-cleanse"}, {l:"BLAST", n:"Warhorn", c:"t-blast"}], 29: [{l:"BLOCK", n:"Shield", c:"t-block"}] },
-            3: { 29: [{l:"BLAST", n:"Shield", c:"t-blast"}, {l:"REFLECT", n:"Shield", c:"t-reflect"}], 26: [{l:"BLAST", n:"Hammer", c:"t-blast"}, {l:"BLOCK", n:"Hammer", c:"t-block"}] },
-            4: { 9: [{l:"WATER", n:"Staff", c:"t-water"}, {l:"BLAST", n:"Staff", c:"t-blast"}, {l:"REFLECT", n:"Wall", c:"t-reflect"}], 24: [{l:"BLAST", n:"Warhorn", c:"t-blast"}] },
-            5: { 33: [{l:"BLAST", n:"Shortbow", c:"t-blast"}, {l:"DARK", n:"Poison", c:"t-dark"}], 22: [{l:"STEALTH", n:"Cloak", c:"t-stealth"}] },
-            6: { 9: [{l:"WATER", n:"Staff", c:"t-water"}, {l:"FIRE", n:"Staff", c:"t-fire"}, {l:"STATIC", n:"Staff", c:"t-static"}, {l:"BLAST", n:"Staff", c:"t-blast"}], 24: [{l:"WATER", n:"Globe", c:"t-water"}], 25: [{l:"BLOCK", n:"Focus", c:"t-block"}], 34: [{l:"REFLECT", n:"Magnetic", c:"t-reflect"}] },
-            7: { 25: [{l:"PULL", n:"Focus", c:"t-pull"}], 29: [{l:"BLOCK", n:"Shield", c:"t-block"}], 9: [{l:"ETHEREAL", n:"Staff", c:"t-ethereal"}] },
-            8: { 9: [{l:"BLAST", n:"Staff", c:"t-blast"}, {l:"CC", n:"Fear", c:"t-cc"}, {l:"WATER", n:"Regen", c:"t-water"}], 24: [{l:"CC", n:"Warhorn", c:"t-cc"}], 25: [{l:"STRIP", n:"Focus", c:"t-strip"}] },
-            9: { 26: [{l:"BLAST", n:"Hammer", c:"t-blast"}, {l:"CC", n:"Hammer", c:"t-cc"}], 9: [{l:"CLEANSE", n:"Staff", c:"t-cleanse"}, {l:"BLAST", n:"Staff", c:"t-blast"}] }
+        // MANUAL WEAPON OVERRIDE (Full Armory)
+        const MANUAL_WEAPONS = {
+            "Staff": [{l:"CC", n:"Line", c:"t-cc"}, {l:"LIGHT", n:"Symbol", c:"t-light"}, {l:"BLAST", n:"Empower", c:"t-blast"}, {l:"WATER", n:"Geyser", c:"t-water"}, {l:"STATIC", n:"Stun", c:"t-static"}, {l:"FIRE", n:"Lava Font", c:"t-fire"}],
+            "Hammer": [{l:"CC", n:"Ring", c:"t-cc"}, {l:"BLAST", n:"Mighty", c:"t-blast"}, {l:"BLOCK", n:"Counter", c:"t-block"}],
+            "GS": [{l:"PULL", n:"Pull", c:"t-pull"}, {l:"MIGHT", n:"Spin", c:"t-might"}],
+            "Scepter": [{l:"IMMOB", n:"Chains", c:"t-immob"}],
+            "Focus": [{l:"BLAST", n:"Ray", c:"t-blast"}, {l:"LIGHT", n:"Ray", c:"t-light"}, {l:"PULL", n:"Pull", c:"t-pull"}, {l:"STRIP", n:"Strip", c:"t-strip"}, {l:"REFLECT", n:"Wall", c:"t-reflect"}],
+            "Shield": [{l:"CC", n:"Push", c:"t-cc"}, {l:"BLOCK", n:"Stance", c:"t-block"}, {l:"REFLECT", n:"Dome", c:"t-reflect"}, {l:"BLAST", n:"Blast", c:"t-blast"}],
+            "Warhorn": [{l:"CLEANSE", n:"Cleanse", c:"t-cleanse"}, {l:"BLAST", n:"Blast", c:"t-blast"}, {l:"WATER", n:"Globe", c:"t-water"}, {l:"CC", n:"Daze", c:"t-cc"}],
+            "Shortbow": [{l:"BLAST", n:"Cluster", c:"t-blast"}, {l:"DARK", n:"Poison", c:"t-dark"}],
+            "Longbow": [{l:"FIRE", n:"Fan", c:"t-fire"}, {l:"STEALTH", n:"Hunter", c:"t-stealth"}, {l:"BLAST", n:"Barrage", c:"t-blast"}],
+            "Rifle": [{l:"CC", n:"Butt", c:"t-cc"}, {l:"IMMOB", n:"Net", c:"t-immob"}],
+            "Axe": [{l:"CC", n:"Pull", c:"t-cc"}, {l:"PULL", n:"Axe 3", c:"t-pull"}],
+            "Sword": [{l:"CC", n:"Kick", c:"t-cc"}, {l:"IMMOB", n:"Immob", c:"t-immob"}],
+            "Mace": [{l:"BLAST", n:"Smash", c:"t-blast"}, {l:"CC", n:"Bash", c:"t-cc"}, {l:"BLOCK", n:"Counter", c:"t-block"}],
+            "Dagger": [{l:"STEALTH", n:"Cloak", c:"t-stealth"}, {l:"CC", n:"Headshot", c:"t-cc"}],
+            "Pistol": [{l:"SMOKE", n:"Black Pwdr", c:"t-smoke"}, {l:"CC", n:"Whip", c:"t-cc"}],
+            "Torch": [{l:"FIRE", n:"Breath", c:"t-fire"}, {l:"BLAST", n:"Cleansing", c:"t-blast"}, {l:"CLEANSE", n:"Light", c:"t-cleanse"}],
+            "Spear": [{l:"CC", n:"Spear", c:"t-cc"}]
         };
 
         const PROFS = { 1:"Guardian", 2:"Warrior", 3:"Engineer", 4:"Ranger", 5:"Thief", 6:"Elementalist", 7:"Mesmer", 8:"Necromancer", 9:"Revenant" };
 
-        // ============================
-        // APP LOGIC
-        // ============================
         const app = {
             db: null, auth: null, paletteCache: {}, activeFilter: null, localBuilds: [],
             
@@ -173,7 +202,6 @@
                     firebase.initializeApp(firebaseConfig);
                     this.db = firebase.firestore();
                     this.auth = firebase.auth();
-                    
                     this.auth.signInAnonymously().catch(e => this.log("Auth Error: " + e.message, "error"));
                     this.auth.onAuthStateChanged(u => {
                         if(u) {
@@ -186,29 +214,21 @@
             },
 
             setupSync: function() {
-                this.db.collection("wvw_v12_builds").orderBy("timestamp", "desc").onSnapshot(snap => {
+                this.db.collection("wvw_v15_builds").orderBy("timestamp", "desc").onSnapshot(snap => {
                     const builds = [];
                     snap.forEach(d => builds.push({ id: d.id, ...d.data() }));
-                    this.localBuilds = builds; // Cache locally for filtering
+                    this.localBuilds = builds;
                     this.renderMatrix(builds);
                     this.renderRoster(builds);
                 });
             },
 
-            // --- ROBUST API FETCH WITH TIMEOUT ---
             getPalette: async function(prof) {
                 if(this.paletteCache[prof]) return this.paletteCache[prof];
                 this.log(`Fetching API for ${prof}...`);
-                
-                // 0.5 Second Timeout: If API is slow, FAIL IMMEDIATELY to prevent hanging
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 500));
-                
                 try {
-                    const response = await Promise.race([
-                        fetch(`https://api.guildwars2.com/v2/professions/${prof}`),
-                        timeoutPromise
-                    ]);
-                    
+                    const response = await Promise.race([fetch(`https://api.guildwars2.com/v2/professions/${prof}`), timeoutPromise]);
                     const d = await response.json();
                     const map = {};
                     if (d.skills_by_palette) d.skills_by_palette.forEach(p => map[p[0]] = p[1]);
@@ -216,16 +236,34 @@
                     this.log("API Success", "success");
                     return map;
                 } catch(e) {
-                    this.log(`API Fail/Slow (${e.message}). Using Fallback.`, "warn");
+                    this.log("API Slow/Fail. Using Fallback.", "warn");
                     return FALLBACK_PALETTES[prof] || null;
                 }
             },
 
             addBuild: async function(e) {
                 e.preventDefault();
+                const btn = document.getElementById('btn-add');
+                btn.innerText = "Processing...";
+                btn.disabled = true;
+
                 const code = document.getElementById('c').value.trim();
                 const name = document.getElementById('n').value.trim() || "Agent";
-                if(!code.startsWith('[&')) return this.log("Invalid Code", "error");
+                
+                // Collect Weapons from 3 Dropdowns
+                const weapons = [];
+                const w1 = document.getElementById('w1').value;
+                const w2 = document.getElementById('w2').value;
+                const w3 = document.getElementById('w3').value;
+                if(w1) weapons.push(w1);
+                if(w2) weapons.push(w2);
+                if(w3) weapons.push(w3);
+
+                if(!code.startsWith('[&')) {
+                    this.log("Invalid Code", "error");
+                    btn.innerText = "ADD BUILD"; btn.disabled = false;
+                    return;
+                }
 
                 try {
                     const b64 = code.replace(/^\[&|\]$/g, '').replace(/-/g, '+').replace(/_/g, '/');
@@ -235,15 +273,14 @@
                     const v = new DataView(bytes.buffer);
 
                     const profId = v.getUint8(1);
-                    const profName = PROFS[profId];
-                    this.log(`Decoding ${profName}...`);
+                    const profName = PROFS[profId] || "Unknown";
+                    this.log(`Detected ${profName}...`);
 
-                    const map = await this.getPalette(profName); // Will use Fallback instantly if API hangs
+                    const map = await this.getPalette(profName);
                     const skills = [];
 
                     if(map) {
-                        const offsets = [11, 13, 15, 17];
-                        offsets.forEach(o => {
+                        [11, 13, 15, 17].forEach(o => {
                             if(bytes.length >= o+2) {
                                 const pid = v.getUint16(o, true);
                                 if (pid > 5000) return;
@@ -253,42 +290,46 @@
                         });
                     }
 
-                    [21,22,23,24].forEach(o => {
-                        if(bytes.length > o) {
-                            const wid = v.getUint8(o);
-                            if(wid !== 0 && WEAPON_DB[profId] && WEAPON_DB[profId][wid]) {
-                                WEAPON_DB[profId][wid].forEach(s => skills.push(s));
-                            }
+                    // Process Selected Weapons
+                    weapons.forEach(w => {
+                        if(MANUAL_WEAPONS[w]) {
+                            MANUAL_WEAPONS[w].forEach(s => skills.push(s));
+                            this.log(`+ Weapon: ${w}`, "success");
                         }
                     });
 
-                    await this.db.collection("wvw_v12_builds").add({
+                    await this.db.collection("wvw_v15_builds").add({
                         name, prof: profName, skills, timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     document.getElementById('c').value = "";
+                    // Optional: Clear weapons or keep them for next paste? Let's keep them for speed.
                     this.log("Build Added.", "success");
-                } catch(err) { this.log("Error: " + err.message, "error"); }
+                } catch(err) { 
+                    this.log("Error: " + err.message, "error"); 
+                    alert("Error adding build. Check console log.");
+                }
+                
+                btn.innerText = "ADD BUILD";
+                btn.disabled = false;
             },
 
-            del: async function(id) { await this.db.collection("wvw_v12_builds").doc(id).delete(); },
+            del: async function(id) { await this.db.collection("wvw_v15_builds").doc(id).delete(); },
             loadDemo: async function() {
-                await this.db.collection("wvw_v12_builds").add({
+                await this.db.collection("wvw_v15_builds").add({
                     name: "Demo Guard", prof: "Guardian", skills: [SKILL_DB[9081], SKILL_DB[9102]], timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
             },
             clearDB: async function() {
-                const snap = await this.db.collection("wvw_v12_builds").get();
+                const snap = await this.db.collection("wvw_v15_builds").get();
                 snap.forEach(d => d.ref.delete());
             },
-
-            // --- FILTER LOGIC ---
             setFilter: function(label) {
                 this.activeFilter = label;
                 document.getElementById('reset-btn').classList.remove('hidden');
                 this.renderRoster(this.localBuilds);
-                // Visual highlight in matrix
                 document.querySelectorAll('.matrix-box').forEach(el => el.classList.remove('filter-active'));
-                document.getElementById(`box-${label}`).classList.add('filter-active');
+                const box = document.getElementById(`box-${label}`);
+                if(box) box.classList.add('filter-active');
             },
             resetFilter: function() {
                 this.activeFilter = null;
@@ -296,7 +337,6 @@
                 document.querySelectorAll('.matrix-box').forEach(el => el.classList.remove('filter-active'));
                 this.renderRoster(this.localBuilds);
             },
-
             renderMatrix: function(builds) {
                 const tally = {};
                 builds.forEach(b => {
@@ -305,12 +345,10 @@
                         tally[s.l].count++;
                     });
                 });
-                
                 const grid = document.getElementById('matrix');
                 grid.innerHTML = "";
                 Object.keys(tally).sort((a,b) => tally[b].count - tally[a].count).forEach(k => {
                     const t = tally[k];
-                    // CLICK to Filter
                     grid.innerHTML += `
                     <div id="box-${k}" onclick="app.setFilter('${k}')" class="matrix-box bg-gray-800 border border-gray-700 p-2 rounded flex flex-col items-center cursor-pointer select-none hover:bg-gray-700 transition">
                         <div class="tag ${t.c} mb-1 pointer-events-none">${k}</div>
@@ -318,29 +356,19 @@
                     </div>`;
                 });
             },
-
             renderRoster: function(builds) {
                 const list = document.getElementById('roster');
                 list.innerHTML = "";
-                
-                // Filter logic
                 const displayBuilds = this.activeFilter 
                     ? builds.filter(b => b.skills && b.skills.some(s => s.l === this.activeFilter))
                     : builds;
-
-                if(displayBuilds.length === 0) {
-                    list.innerHTML = '<div class="text-center text-gray-600 text-xs mt-4">No builds match filter.</div>';
-                    return;
-                }
-
+                if(displayBuilds.length === 0) { list.innerHTML = '<div class="text-center text-gray-600 text-xs mt-4">No builds found.</div>'; return; }
                 displayBuilds.forEach(b => {
-                    // Detailed Tags: STAB (SYG)
                     const tags = b.skills ? b.skills.map(s => {
-                        // Highlight specific tag if filtering
                         const opacity = (this.activeFilter && s.l !== this.activeFilter) ? 'opacity-20' : 'opacity-100';
-                        return `<span class="tag ${s.c} ${opacity}" title="${s.n}">${s.l} (${s.n})</span>`;
+                        // NEW: Explicit label inside the tag
+                        return `<span class="tag ${s.c} ${opacity}">${s.l}<span class="tag-source">${s.n}</span></span>`;
                     }).join('') : '';
-
                     list.innerHTML += `
                     <div class="flex flex-col p-2 border-b border-gray-800 hover:bg-gray-800 transition">
                         <div class="flex justify-between items-center mb-1">
@@ -353,7 +381,6 @@
                 });
             }
         };
-
         app.init();
     </script>
 </body>
